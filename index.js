@@ -20,15 +20,15 @@ const helpers = require('handlebars-helpers')({
 });
 
 async function main() {
-    // connection = await createConnection({
-    //     'host': process.env.DB_HOST,
-    //     'user': process.env.DB_USER,
-    //     'database': process.env.DB_NAME,
-    //     'password': process.env.DB_PASSWORD
-    // })
+     connection = await createConnection({
+         'host': process.env.DB_HOST,
+         'user': process.env.DB_USER,
+         'database': process.env.DB_NAME,
+         'password': process.env.DB_PASSWORD
+     })
 
     app.get('/', async function (req, res) {
-        res.render('<h1>Hello from Express</h1>');
+        res.render('index');
 
     });
 }
