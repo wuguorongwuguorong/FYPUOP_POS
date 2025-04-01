@@ -43,7 +43,7 @@ CREATE TABLE shop_suppliers (
     shop_id INT NOT NULL,
     supplier_id INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 )engine = innodb;
 
 

@@ -1,2 +1,5 @@
-sudo mysql -u root < schema.sql
+mysql -u root -p
+
+use password: ' roti_Prata123'
 ```
+SeeYouTomorrow!123
