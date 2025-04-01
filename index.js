@@ -31,6 +31,14 @@ async function main() {
         res.render('index');
 
     });
+    //create all menu
+    app.get('/menus', async function (req, res) {
+        const [menuItems] = await connection.execute("SELECT * FROM menu_items")
+        console.log(menuItems);
+        res.render('menu', {
+            "allMenu": menuItems
+        });
+    })
 }
 
 main();
