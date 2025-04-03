@@ -32,15 +32,15 @@
     {{#each allMenu}}
     <tr>
         <td>{{this.item_name}}</td>
-        <td>{{this.item_price}}</td>
+        <td>${{this.item_price}}</td>
         <td>{{this.image_url}}</td>
         <td>{{this.created_at}}</td>
         <td>{{this.updated_at}}</td>
 
-        <td>
+        {{!-- <td>
             <a href="/menu/{{this.menu_item_id}}/update" class="btn btn-primary btn-sm">Edit</a>
             <a href="/menu/{{this.menu_item_id}}/delete" class="btn btn-danger btn-sm">Delete</a>
-        </td>
+        </td> --}}
     </tr>
     {{/each}}
 </table>

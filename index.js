@@ -5,8 +5,10 @@ require('dotenv').config();
 const { createConnection } = require('mysql2/promise');
 const { defaultConfiguration } = require('express/lib/application');
 const XLSX = require('xlsx');
+const cors = require('cors');
 
 let app = express();
+app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
@@ -31,8 +33,8 @@ async function main() {
         res.render('index');
 
     });
-    //create all menu
-    app.get('/menus', async function (req, res) {
+    //see all menu
+    app.get('/menu', async function (req, res) {
         const [menuItems] = await connection.execute("SELECT * FROM menu_items")
         console.log(menuItems);
         res.render('menu', {
