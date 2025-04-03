@@ -33,10 +33,6 @@ CREATE TABLE IF NOT EXISTS suppliers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )engine = innodb;
 
-ALTER TABLE shop_suppliers ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE shop_suppliers ADD COLUMN supplier_id int UNSIGNED;
-ALTER TABLE shop_suppliers ADD CONSTRAINT fk_shop_supplier FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
-ALTER TABLE shop_suppliers ADD CONSTRAINT fk_supply_suppliers FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
 
 CREATE TABLE IF NOT EXISTS shop_suppliers (
     shop_supplier_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,10 +41,6 @@ CREATE TABLE IF NOT EXISTS shop_suppliers (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 )engine = innodb;
-
-
-ALTER TABLE inventory_items ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE inventory_items ADD CONSTRAINT fk_shop_inventory FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 
 CREATE TABLE IF NOT EXISTS inventory_items (
     inventory_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,10 +53,6 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )engine = innodb;
 
-ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE supplier_orders ADD COLUMN supplier_id int UNSIGNED;
-ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
-ALTER TABLE supplier_orders ADD CONSTRAINT fk_supply_suppliers_order FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
 
 CREATE TABLE IF NOT EXISTS supplier_orders (
     supply_order_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -80,11 +68,6 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
 )engine = innodb;
 
 
-ALTER TABLE supplier_order_items ADD COLUMN supply_order_id int UNSIGNED;
-ALTER TABLE supplier_order_items ADD COLUMN inventory_item_id int UNSIGNED;
-ALTER TABLE supplier_order_items ADD CONSTRAINT fk_shop_supplier_order_item FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supply_order_id);
-ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supply_suppliers_order_item FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
-
 CREATE TABLE IF NOT EXISTS supplier_order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     supply_order_id INT NOT NULL,
@@ -97,9 +80,6 @@ CREATE TABLE IF NOT EXISTS supplier_order_items (
     FOREIGN KEY (item_id) REFERENCES inventory_items(item_id) ON DELETE CASCADE
 )engine = innodb;
 
-
-ALTER TABLE inventory_transactions ADD COLUMN inventory_item_id int UNSIGNED;
-ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
 
 CREATE TABLE IF NOT EXISTS inventory_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -114,9 +94,6 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
 )engine = innodb;
 
 
-ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
-
 CREATE TABLE IF NOT EXISTS  menu_items (
     menu_item_id INT AUTO_INCREMENT PRIMARY KEY,
     shop_id INT NOT NULL,
@@ -129,10 +106,7 @@ CREATE TABLE IF NOT EXISTS  menu_items (
     
 )engine = innodb;
 
-ALTER TABLE recipes ADD COLUMN inventory_item_id int UNSIGNED;
-ALTER TABLE recipes ADD COLUMN menu_item_id int UNSIGNED;
-ALTER TABLE recipes ADD CONSTRAINT fk_recipes_inventory FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
-ALTER TABLE recipes ADD CONSTRAINT fk_recipes_menu_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
+
 
 CREATE TABLE IF NOT EXISTS recipes (
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,10 +119,6 @@ CREATE TABLE IF NOT EXISTS recipes (
 
 )engine = innodb;
 
-ALTER TABLE orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE orders ADD COLUMN customer_id int UNSIGNED;
-ALTER TABLE orders ADD CONSTRAINT fk_shop_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
-ALTER TABLE orders ADD CONSTRAINT fk_cust_order FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
 
 CREATE TABLE IF NOT EXISTS orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -169,11 +139,6 @@ CREATE TABLE IF NOT EXISTS orders (
 
 )engine = innodb;
 
-ALTER TABLE order_items ADD COLUMN menu_item_id int UNSIGNED;
-ALTER TABLE order_items ADD COLUMN order_id int UNSIGNED;
-ALTER TABLE order_items ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
-ALTER TABLE order_items ADD CONSTRAINT fk_order_menu FOREIGN KEY(order_id) REFERENCES orders(order_id);
-
 CREATE TABLE IF NOT EXISTS order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -185,11 +150,6 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 )engine = innodb;
 
-
-ALTER TABLE customer_transactions ADD COLUMN order_id int UNSIGNED;
-ALTER TABLE customer_transactions ADD COLUMN customer_id int UNSIGNED;
-ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_order FOREIGN KEY(order_id) REFERENCES orders(order_id);
-ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_trans FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
 
 CREATE TABLE IF NOT EXISTS customer_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -203,3 +163,47 @@ CREATE TABLE IF NOT EXISTS customer_transactions (
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE SET NULL
     
 )engine = innodb;
+
+ALTER TABLE shop_suppliers ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE shop_suppliers ADD COLUMN supplier_id int UNSIGNED;
+ALTER TABLE shop_suppliers ADD CONSTRAINT fk_shop_supplier FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+ALTER TABLE shop_suppliers ADD CONSTRAINT fk_supply_suppliers FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
+
+ALTER TABLE inventory_items ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE inventory_items ADD CONSTRAINT fk_shop_inventory FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+
+ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE supplier_orders ADD COLUMN supplier_id int UNSIGNED;
+ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+ALTER TABLE supplier_orders ADD CONSTRAINT fk_supply_suppliers_order FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
+
+ALTER TABLE supplier_order_items ADD COLUMN supply_order_id int UNSIGNED;
+ALTER TABLE supplier_order_items ADD COLUMN inventory_item_id int UNSIGNED;
+ALTER TABLE supplier_order_items ADD CONSTRAINT fk_shop_supplier_order_item FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supply_order_id);
+ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supply_suppliers_order_item FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+
+ALTER TABLE inventory_transactions ADD COLUMN inventory_item_id int UNSIGNED;
+ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+
+ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+
+ALTER TABLE recipes ADD COLUMN inventory_item_id int UNSIGNED;
+ALTER TABLE recipes ADD COLUMN menu_item_id int UNSIGNED;
+ALTER TABLE recipes ADD CONSTRAINT fk_recipes_inventory FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+ALTER TABLE recipes ADD CONSTRAINT fk_recipes_menu_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
+
+ALTER TABLE orders ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE orders ADD COLUMN customer_id int UNSIGNED;
+ALTER TABLE orders ADD CONSTRAINT fk_shop_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+ALTER TABLE orders ADD CONSTRAINT fk_cust_order FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
+
+ALTER TABLE order_items ADD COLUMN menu_item_id int UNSIGNED;
+ALTER TABLE order_items ADD COLUMN order_id int UNSIGNED;
+ALTER TABLE order_items ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
+ALTER TABLE order_items ADD CONSTRAINT fk_order_menu FOREIGN KEY(order_id) REFERENCES orders(order_id);
+
+ALTER TABLE customer_transactions ADD COLUMN order_id int UNSIGNED;
+ALTER TABLE customer_transactions ADD COLUMN customer_id int UNSIGNED;
+ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_order FOREIGN KEY(order_id) REFERENCES orders(order_id);
+ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_trans FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
