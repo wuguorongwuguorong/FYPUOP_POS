@@ -1,4 +1,4 @@
-create database EATery;
+create database EATery1;
 
 use EATery;
 
@@ -36,62 +36,59 @@ CREATE TABLE IF NOT EXISTS suppliers (
 
 CREATE TABLE IF NOT EXISTS shop_suppliers (
     shop_supplier_id INT AUTO_INCREMENT PRIMARY KEY,
-    shop_id INT NOT NULL,
-    supplier_id INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-    FOREIGN KEY (suppliers) REFERENCES suppliers(suppliers) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )engine = innodb;
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id) ON DELETE CASCADE
 
 CREATE TABLE IF NOT EXISTS inventory_items (
-    inventory_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    inv_item_id INT AUTO_INCREMENT PRIMARY KEY,
     inv_item_name VARCHAR(100) NOT NULL,
-    inv_item_unit VARCHAR(20) NOT NULL, -- e.g., kg, liter, piece
+    inv_item_unit VARCHAR(20) NOT NULL,
     inv_item_current_quantity DECIMAL(10,2) DEFAULT 0,
     inv_item_reorder_level DECIMAL(10,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )engine = innodb;
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
 
 
 CREATE TABLE IF NOT EXISTS supplier_orders (
     supply_order_id INT AUTO_INCREMENT PRIMARY KEY,
     supply_order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    supply_expected_delivery_date TIMESTAMP NULL,
+    supply_deli_date TIMESTAMP NULL,
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     supply_total_amount DECIMAL(10,2),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-    FOREIGN KEY (suppliers) REFERENCES suppliers(suppliers) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+   
 )engine = innodb;
-
+FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
+FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE
 
 CREATE TABLE IF NOT EXISTS supplier_order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    desc_item VARCHAR(100) NOT NULL;
     quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
     received_quantity DECIMAL(10,2) DEFAULT 0,
-    status ENUM('pending', 'partially_received', 'completed') DEFAULT 'pending',
-    FOREIGN KEY (supply_order_id) REFERENCES supplier_orders(supply_order_id) ON DELETE CASCADE
-    FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(inventory_item_id) ON DELETE CASCADE
+    status ENUM('pending', 'partially_received', 'completed') DEFAULT 'pending'
 )engine = innodb;
+    FOREIGN KEY (supply_order_id) REFERENCES supplier_orders(supply_order_id) ON DELETE CASCADE
+    FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+
 
 
 CREATE TABLE IF NOT EXISTS inventory_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-    quantity_change DECIMAL(10,2) NOT NULL,
+    qty_change DECIMAL(10,2) NOT NULL,
     transaction_type ENUM('replenish', 'sale', 'adjustment', 'waste') NOT NULL,
-    reference_id INT, 
-    reference_type VARCHAR(50), 
     notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (inventory_items) REFERENCES inventory_items(inventory_items) ON DELETE CASCADE
-
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )engine = innodb;
+    FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
 
 
 CREATE TABLE IF NOT EXISTS  menu_items (
@@ -101,24 +98,35 @@ CREATE TABLE IF NOT EXISTS  menu_items (
     is_active BOOLEAN DEFAULT TRUE,
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-    
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
 )engine = innodb;
-
-
+FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
+    
 
 CREATE TABLE IF NOT EXISTS recipes (
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
-    quantity DECIMAL(10,2) NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
-    FOREIGN KEY (inventory_items) REFERENCES inventory_items(inventory_items) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 )engine = innodb;
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
+    FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+    
+CREATE TABLE IF NOT EXISTS recipes_ing (
+    rec_ing_id INT AUTO_INCREMENT PRIMARY KEY,
+    desc_text VARCHAR(255),
+    quantity DECIMAL(10,2) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)engine = innodb;  
+FOREIGN KEY (recipe_id) REFERENCES recipes(recipe_id) ON DELETE CASCADE 
 
+CREATE TABLE IF NOT EXISTS order_cart (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    quantity INT NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    special_instructions TEXT 
+)engine = innodb;
+FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE
 
 CREATE TABLE IF NOT EXISTS orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -133,77 +141,64 @@ CREATE TABLE IF NOT EXISTS orders (
     points_earned INT DEFAULT 0,
     points_redeemed INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)engine = innodb;
     FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
     FOREIGN KEY (customer_id) REFERENCES suppliers(customer_id) ON DELETE CASCADE
-
-)engine = innodb;
-
-CREATE TABLE IF NOT EXISTS order_items (
-    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    menu_item_id INT NOT NULL,
-    quantity INT NOT NULL DEFAULT 1,
-    unit_price DECIMAL(10,2) NOT NULL,
-    special_instructions TEXT,
-    status ENUM('pending', 'preparing', 'ready', 'served', 'cancelled') DEFAULT 'pending',
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
-    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE
-
-
-)engine = innodb;
-
+    FOREIGN KEY (order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE
 
 CREATE TABLE IF NOT EXISTS customer_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
     points_change INT NOT NULL,
-    transaction_type ENUM('earned', 'redeemed', 'adjusted') NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    transaction_type ENUM('earned', 'redeemed') NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   
+)engine = innodb;
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE SET NULL
-    
-)engine = innodb;
 
 ALTER TABLE shop_suppliers ADD COLUMN shop_id int UNSIGNED;
 ALTER TABLE shop_suppliers ADD COLUMN supplier_id int UNSIGNED;
 ALTER TABLE shop_suppliers ADD CONSTRAINT fk_shop_supplier FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 ALTER TABLE shop_suppliers ADD CONSTRAINT fk_supply_suppliers FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
 
-ALTER TABLE inventory_items ADD COLUMN shop_id int UNSIGNED;
+ALTER TABLE inventory_items ADD COLUMN shop_id int;
 ALTER TABLE inventory_items ADD CONSTRAINT fk_shop_inventory FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 
-ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE supplier_orders ADD COLUMN supplier_id int UNSIGNED;
+ALTER TABLE supplier_orders ADD COLUMN shop_id int;
+ALTER TABLE supplier_orders ADD COLUMN supplier_id int;
 ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 ALTER TABLE supplier_orders ADD CONSTRAINT fk_supply_suppliers_order FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
 
-ALTER TABLE supplier_order_items ADD COLUMN supply_order_id int UNSIGNED;
-ALTER TABLE supplier_order_items ADD COLUMN inventory_item_id int UNSIGNED;
+ALTER TABLE supplier_order_items ADD COLUMN supply_order_id int;
+ALTER TABLE supplier_order_items ADD COLUMN inv_item_id int;
 ALTER TABLE supplier_order_items ADD CONSTRAINT fk_shop_supplier_order_item FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supply_order_id);
-ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supply_suppliers_order_item FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supply_suppliers_order_item FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
 
-ALTER TABLE inventory_transactions ADD COLUMN inventory_item_id int UNSIGNED;
-ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+ALTER TABLE inventory_transactions ADD COLUMN inv_item_id int;
+ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
 
-ALTER TABLE supplier_orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE supplier_orders ADD CONSTRAINT fk_shop_supplier_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+ALTER TABLE menu_items ADD COLUMN shop_id int;
+ALTER TABLE menu_items ADD CONSTRAINT fk_shop_menu_item FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 
-ALTER TABLE recipes ADD COLUMN inventory_item_id int UNSIGNED;
-ALTER TABLE recipes ADD COLUMN menu_item_id int UNSIGNED;
-ALTER TABLE recipes ADD CONSTRAINT fk_recipes_inventory FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(inventory_item_id);
+ALTER TABLE recipes ADD COLUMN inv_item_id int;
+ALTER TABLE recipes ADD COLUMN menu_item_id int;
+ALTER TABLE recipes ADD CONSTRAINT fk_recipes_inventory FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
 ALTER TABLE recipes ADD CONSTRAINT fk_recipes_menu_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
 
-ALTER TABLE orders ADD COLUMN shop_id int UNSIGNED;
-ALTER TABLE orders ADD COLUMN customer_id int UNSIGNED;
+ALTER TABLE recipes_ing ADD COLUMN recipe_id int;
+ALTER TABLE recipes_ing ADD CONSTRAINT fk_recipes_item FOREIGN KEY(recipe_id) REFERENCES recipes(recipe_id);
+
+ALTER TABLE order_cart ADD COLUMN menu_item_id int;
+ALTER TABLE order_cart ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
+
+ALTER TABLE orders ADD COLUMN shop_id int;
+ALTER TABLE orders ADD COLUMN order_item_id int;
+ALTER TABLE orders ADD COLUMN customer_id int;
 ALTER TABLE orders ADD CONSTRAINT fk_shop_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 ALTER TABLE orders ADD CONSTRAINT fk_cust_order FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
+ALTER TABLE orders ADD CONSTRAINT fk_cust_order_item FOREIGN KEY(order_item_id) REFERENCES order_cart(order_item_id);
 
-ALTER TABLE order_items ADD COLUMN menu_item_id int UNSIGNED;
-ALTER TABLE order_items ADD COLUMN order_id int UNSIGNED;
-ALTER TABLE order_items ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
-ALTER TABLE order_items ADD CONSTRAINT fk_order_menu FOREIGN KEY(order_id) REFERENCES orders(order_id);
-
-ALTER TABLE customer_transactions ADD COLUMN order_id int UNSIGNED;
-ALTER TABLE customer_transactions ADD COLUMN customer_id int UNSIGNED;
-ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_order FOREIGN KEY(order_id) REFERENCES orders(order_id);
+ALTER TABLE customer_transactions ADD COLUMN order_id int;
+ALTER TABLE customer_transactions ADD COLUMN customer_id int;
+ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_order_trans FOREIGN KEY(order_id) REFERENCES orders(order_id);
 ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_trans FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
