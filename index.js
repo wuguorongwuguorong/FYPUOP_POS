@@ -13,6 +13,11 @@ app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
 
+hbs.registerHelper('formatDate', function(datetime) {
+    const date = new Date(datetime);
+    return date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+  });
+
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
 

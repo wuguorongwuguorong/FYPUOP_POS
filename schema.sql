@@ -37,10 +37,11 @@ CREATE TABLE IF NOT EXISTS suppliers (
 CREATE TABLE IF NOT EXISTS shop_suppliers (
     shop_supplier_id INT AUTO_INCREMENT PRIMARY KEY,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)engine = innodb;
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id) ON DELETE CASCADE
+)engine = innodb;
+
 
 CREATE TABLE IF NOT EXISTS inventory_items (
     inv_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -49,9 +50,10 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     inv_item_current_quantity DECIMAL(10,2) DEFAULT 0,
     inv_item_reorder_level DECIMAL(10,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)engine = innodb;
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
+)engine = innodb;
+
 
 
 CREATE TABLE IF NOT EXISTS supplier_orders (
@@ -62,11 +64,11 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
     supply_total_amount DECIMAL(10,2),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-   
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+   FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
+   FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE
 )engine = innodb;
-FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE
+
 
 CREATE TABLE IF NOT EXISTS supplier_order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,10 +76,11 @@ CREATE TABLE IF NOT EXISTS supplier_order_items (
     quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
     received_quantity DECIMAL(10,2) DEFAULT 0,
-    status ENUM('pending', 'partially_received', 'completed') DEFAULT 'pending'
-)engine = innodb;
-    FOREIGN KEY (supply_order_id) REFERENCES supplier_orders(supply_order_id) ON DELETE CASCADE
+    status ENUM('pending', 'partially_received', 'completed') DEFAULT 'pending',
+    FOREIGN KEY (supply_order_id) REFERENCES supplier_orders(supply_order_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+)engine = innodb;
+
 
 
 
@@ -86,9 +89,10 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     qty_change DECIMAL(10,2) NOT NULL,
     transaction_type ENUM('replenish', 'sale', 'adjustment', 'waste') NOT NULL,
     notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)engine = innodb;
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+)engine = innodb;
+
 
 
 CREATE TABLE IF NOT EXISTS  menu_items (
@@ -98,35 +102,37 @@ CREATE TABLE IF NOT EXISTS  menu_items (
     is_active BOOLEAN DEFAULT TRUE,
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
 )engine = innodb;
-FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
+
     
 
 CREATE TABLE IF NOT EXISTS recipes (
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
-)engine = innodb;
     FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+)engine = innodb;
+
     
 CREATE TABLE IF NOT EXISTS recipes_ing (
     rec_ing_id INT AUTO_INCREMENT PRIMARY KEY,
     desc_text VARCHAR(255),
     quantity DECIMAL(10,2) NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipe_id) REFERENCES recipes(recipe_id) ON DELETE CASCADE 
 )engine = innodb;  
-FOREIGN KEY (recipe_id) REFERENCES recipes(recipe_id) ON DELETE CASCADE 
+
 
 CREATE TABLE IF NOT EXISTS order_cart (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     quantity INT NOT NULL DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
-    special_instructions TEXT 
+    special_instructions TEXT ,
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE
 )engine = innodb;
-FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE
+
 
 CREATE TABLE IF NOT EXISTS orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -141,20 +147,22 @@ CREATE TABLE IF NOT EXISTS orders (
     points_earned INT DEFAULT 0,
     points_redeemed INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)engine = innodb;
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-    FOREIGN KEY (customer_id) REFERENCES suppliers(customer_id) ON DELETE CASCADE
+    FOREIGN KEY (customer_id) REFERENCES suppliers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE
+)engine = innodb;
+
 
 CREATE TABLE IF NOT EXISTS customer_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
     points_change INT NOT NULL,
     transaction_type ENUM('earned', 'redeemed') NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   
-)engine = innodb;
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE SET NULL
+)engine = innodb;
+
 
 ALTER TABLE shop_suppliers ADD COLUMN shop_id int UNSIGNED;
 ALTER TABLE shop_suppliers ADD COLUMN supplier_id int UNSIGNED;

@@ -31,11 +31,13 @@
     </tr>
     {{#each allMenu}}
     <tr>
-        <td>{{this.item_name}}</td>
-        <td>${{this.item_price}}</td>
-        <td>{{this.image_url}}</td>
-        <td>{{this.created_at}}</td>
-        <td>{{this.updated_at}}</td>
+        <td>{{this.menu_item_name}}</td>
+        <td>${{this.menu_item_price}}</td>
+          <td>
+          <img src="{{image_url}}" alt="{{menu_item_name}}" style="width: 100px; height: auto;">
+        </td>
+        <td>{{formatDate created_at}}</td>
+        <td>{{formatDate updated_at}}</td>
 
         {{!-- <td>
             <a href="/menu/{{this.menu_item_id}}/update" class="btn btn-primary btn-sm">Edit</a>
