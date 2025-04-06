@@ -46,8 +46,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/inventory">Inventory</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/suppliers">Suppliers</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Suppliers
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="/suppliers">View Suppliers</a>
+                            <a class="dropdown-item" href="/suppliers/ordering">Supply Ordering</a>
+                            <a class="dropdown-item" href="/suppliers/transaction">Outstanding Orders</a>
+                            <a class="dropdown-item" href="/suppliers/transaction">Completed Orders</a>
+                        </div>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/recipes">Recipes</a>
