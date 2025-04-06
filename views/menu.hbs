@@ -43,7 +43,11 @@
             <td>{{formatDate this.updated_at}}</td>
             <td>
                 <a href="/menu/{{this.menu_item_id}}/update" class="btn btn-primary btn-sm">Edit</a>
-                <a href="/menu/{{this.menu_item_id}}/delete" class="btn btn-danger btn-sm">Delete</a>
+                <a href="/menu/{{this.menu_item_id}}/delete" class="btn btn-danger btn-sm"
+                    onclick="return confirm('Are you sure you want to delete this item?');">
+                    Delete
+                </a>
+
             </td>
         </tr>
         {{/each}}

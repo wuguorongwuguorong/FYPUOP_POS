@@ -134,6 +134,32 @@ async function main() {
     res.redirect('/menu');
   });
 
+//delete menu route starts here
+app.get('/menu/:id/delete', async function (req, res) {
+  const menuItemId = req.params.id;
+
+  try {
+      await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
+      res.redirect('/menu');
+  } catch (err) {
+      console.error('Error deleting menu item:', err);
+      res.status(500).send('Error deleting menu item');
+  }
+});
+
+//post after deletion
+app.post('/menu/:id/delete', async function (req, res) {
+  const menuItemId = req.params.id;
+
+  try {
+      await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
+      res.redirect('/menu');
+  } catch (err) {
+      console.error('Error deleting menu item:', err);
+      res.status(500).send('Error deleting menu item');
+  }
+});
+
 
 }
 
