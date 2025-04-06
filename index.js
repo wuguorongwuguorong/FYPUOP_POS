@@ -134,32 +134,58 @@ async function main() {
     res.redirect('/menu');
   });
 
-//delete menu route starts here
-app.get('/menu/:id/delete', async function (req, res) {
-  const menuItemId = req.params.id;
+  //delete menu route starts here
+  app.get('/menu/:id/delete', async function (req, res) {
+    const menuItemId = req.params.id;
 
-  try {
+    try {
       await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
       res.redirect('/menu');
-  } catch (err) {
+    } catch (err) {
       console.error('Error deleting menu item:', err);
       res.status(500).send('Error deleting menu item');
-  }
-});
+    }
+  });
 
-//post after deletion
-app.post('/menu/:id/delete', async function (req, res) {
-  const menuItemId = req.params.id;
+  //post after deletion
+  app.post('/menu/:id/delete', async function (req, res) {
+    const menuItemId = req.params.id;
 
-  try {
+    try {
       await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
       res.redirect('/menu');
-  } catch (err) {
+    } catch (err) {
       console.error('Error deleting menu item:', err);
       res.status(500).send('Error deleting menu item');
-  }
-});
+    }
+  });
 
+  //view inventory items
+  app.get('/inventory', async function (req, res) {
+    try {
+      const [inventory] = await connection.execute(
+        "SELECT * FROM inventory_items"
+      );
+      res.render('inventory', {
+        inventoryList: inventory
+      });
+    } catch (err) {
+      console.error("Error loading inventory:", err);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+
+  // GET suppliers
+  app.get('/suppliers', async (req, res) => {
+    try {
+      const [suppliers] = await connection.execute('SELECT * FROM suppliers');
+      res.render('suppliers', { suppliers });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+    }
+  });
 
 }
 

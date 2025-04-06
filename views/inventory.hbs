@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Inventory Items</h2>
+        <table class="table table-bordered table-striped">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Item Name</th>
+                    <th>Unit</th>
+                    <th>Current Quantity</th>
+                    <th>Reorder Level</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th>Shop ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each inventoryList}}
+                <tr>
+                    <td>{{this.inv_item_name}}</td>
+                    <td>{{this.inv_item_unit}}</td>
+                    <td>{{this.inv_item_current_quantity}}</td>
+                    <td>{{this.inv_item_reorder_level}}</td>
+                    <td>{{this.created_at}}</td>
+                    <td>{{this.updated_at}}</td>
+                    <td>{{this.shop_id}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
