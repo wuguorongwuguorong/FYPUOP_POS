@@ -1,0 +1,63 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<div class="container mt-4">
+    <h2>Edit Menu Item</h2>
+    <form action="/menu/{{menu.menu_item_id}}/update" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" name="menu_item_name" value="{{menu.menu_item_name}}" required class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label>Item Price</label>
+            <input type="number" step="0.01" name="menu_item_price" value="{{menu.menu_item_price}}" required
+                class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label>Active</label>
+            <select name="is_active" class="form-control">
+                <option value="1" {{#if menu.is_active}}selected{{/if}}>Yes</option>
+                <option value="0" {{#unless menu.is_active}}selected{{/unless}}>No</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Shop</label>
+            <select name="shop_id" class="form-control">
+                {{#each shops}}
+                <option value="{{this.shop_id}}" {{#ifEquals this.shop_id ../menu.shop_id}}selected{{/ifEquals}}>
+                    {{this.shop_name}}
+                </option>
+                {{/each}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Image (optional)</label>
+            <input type="file" name="image" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+
+</div>
+{{/block}}
+
+{{#block "js"}}
+<script>
+    // Update file input label when file is selected
+    document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+        const fileName = e.target.files[0] ? e.target.files[0].name : "Choose file...";
+        this.nextElementSibling.textContent = fileName;
+    });
+
+    // Price input formatting
+    document.getElementById('item_price').addEventListener('blur', function () {
+        this.value = parseFloat(this.value).toFixed(2);
+    });
+</script>
+{{/block}}
+
+{{/extends}}
