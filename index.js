@@ -175,19 +175,107 @@ async function main() {
     }
   });
 
-
-  // GET suppliers
+  // GET Suppliers route
   app.get('/suppliers', async (req, res) => {
     try {
-      const [suppliers] = await connection.execute('SELECT * FROM suppliers');
+      const [suppliers] = await connection.execute(`
+        SELECT 
+          s.supplier_id, 
+          s.supplier_name, 
+          s.supplier_contact_person, 
+          s.supplier_email, 
+          s.created_at AS supplier_created_at, 
+          s.updated_at AS supplier_updated_at,
+          ss.shop_supplier_id,
+          ss.shop_id,
+          ss.is_active,
+          ss.created_at AS shop_link_created_at
+        FROM suppliers s
+        LEFT JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
+      `);
+  
       res.render('suppliers', { suppliers });
     } catch (err) {
-      console.error(err);
+      console.error("Error loading suppliers:", err);
       res.status(500).send('Server error');
     }
   });
+  
+  //Create Supplier Route
+  app.get('/suppliers/create', async (req, res) => {
+    try {
+    
+      const [shops] = await connection.execute("SELECT shop_id FROM shops");
+  
+      res.render('suppliers_create', { shops });
+    } catch (err) {
+      console.error("Error loading supplier form:", err);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  
+  // POST route for creating a new supplier
+  app.post('/suppliers/create', async (req, res) => {
+    const { supplier_name, supplier_contact_person, supplier_email, shop_id, is_active } = req.body;
+  
+    try {
+      // Insert into suppliers table
+      const [supplierResult] = await connection.execute(
+        `INSERT INTO suppliers (supplier_name, supplier_contact_person, supplier_email)
+         VALUES (?, ?, ?)`,
+        [supplier_name, supplier_contact_person, supplier_email]
+      );
+  
+      const newSupplierId = supplierResult.insertId;
+  
+      // Insert into shop_suppliers table
+      await connection.execute(
+        `INSERT INTO shop_suppliers (shop_id, supplier_id, is_active)
+         VALUES (?, ?, ?)`,
+        [shop_id, newSupplierId, is_active === 'true' ? 1 : 0]
+      );
+  
+      res.redirect('/suppliers');
+    } catch (err) {
+      console.error("Error creating supplier:", err);
+      res.status(500).send('Server error');
+    }
+  });
+  
 
-}
+  //GET Supplier Ordering
+  app.get('/suppliers/:supplier_id/ordering', async (req, res) => {
+    const supplierId = req.params.supplier_id;
+
+    try {
+      // Query the shop, supplier, and possibly existing orders
+      const [supplierData] = await connection.execute(`
+        SELECT s.supplier_id, s.supplier_name, s.supplier_email, ss.is_active, sh.shop_id, sh.shop_name
+        FROM suppliers s
+        JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
+        JOIN shops sh ON ss.shop_id = sh.shop_id
+        WHERE s.supplier_id = ?
+      `, [supplierId]);
+
+      if (supplierData.length === 0) {
+        return res.status(404).send('Supplier not found or not linked to any shop');
+      }
+
+      // You may also join with `supplier_order_items` if needed
+
+      res.render('supplier_ordering', {
+        supplier: supplierData[0]
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
+
+
+
+}//end
 
 main();
 

@@ -72,13 +72,15 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
 
 CREATE TABLE IF NOT EXISTS supplier_order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    desc_item VARCHAR(100) NOT NULL;
+    SKU_num VARCHAR(16),
+    desc_item VARCHAR(100) NOT NULL,
     quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
     received_quantity DECIMAL(10,2) DEFAULT 0,
     status ENUM('pending', 'partially_received', 'completed') DEFAULT 'pending',
     FOREIGN KEY (supply_order_id) REFERENCES supplier_orders(supply_order_id) ON DELETE CASCADE,
-    FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
+    FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers (supplier_id) ON DELETE CASCADE
 )engine = innodb;
 
 
@@ -179,8 +181,10 @@ ALTER TABLE supplier_orders ADD CONSTRAINT fk_supply_suppliers_order FOREIGN KEY
 
 ALTER TABLE supplier_order_items ADD COLUMN supply_order_id int;
 ALTER TABLE supplier_order_items ADD COLUMN inv_item_id int;
+ALTER TABLE supplier_order_items ADD COLUMN supplier_id int;
 ALTER TABLE supplier_order_items ADD CONSTRAINT fk_shop_supplier_order_item FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supply_order_id);
 ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supply_suppliers_order_item FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
+ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supplier_item FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
 
 ALTER TABLE inventory_transactions ADD COLUMN inv_item_id int;
 ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
