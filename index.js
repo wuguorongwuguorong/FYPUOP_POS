@@ -214,8 +214,7 @@ async function main() {
     }
   });
   
-  
-  // POST route for creating a new supplier
+  // Post route for creating a new supplier
   app.post('/suppliers/create', async (req, res) => {
     const { supplier_name, supplier_contact_person, supplier_email, shop_id, is_active } = req.body;
   
@@ -239,6 +238,75 @@ async function main() {
       res.redirect('/suppliers');
     } catch (err) {
       console.error("Error creating supplier:", err);
+      res.status(500).send('Server error');
+    }
+  });
+  
+  //Get route for updating suppliers 
+  app.get('/suppliers/:id/update', async (req, res) => {
+    const supplierId = req.params.id;
+  
+    try {
+      const [rows] = await connection.execute(
+        `SELECT s.*, ss.shop_id, ss.is_active
+         FROM suppliers s
+         LEFT JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
+         WHERE s.supplier_id = ?`,
+        [supplierId]
+      );
+  
+      if (rows.length === 0) return res.status(404).send('Supplier not found');
+  
+      const supplier = rows[0];
+  
+      // Optional: Get all available shop IDs
+      const [shops] = await connection.execute("SELECT shop_id FROM shops");
+  
+      res.render('suppliers_edit', { supplier, shops });
+    } catch (err) {
+      console.error("Error loading supplier for edit:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  // Post route suppliers updating
+  app.post('/suppliers/:id/update', async (req, res) => {
+    const supplierId = req.params.id;
+    const { supplier_name, supplier_contact_person, supplier_email, shop_id, is_active } = req.body;
+  
+    try {
+      // Update the suppliers table
+      await connection.execute(
+        `UPDATE suppliers 
+         SET supplier_name = ?, supplier_contact_person = ?, supplier_email = ?
+         WHERE supplier_id = ?`,
+        [supplier_name, supplier_contact_person || null, supplier_email, supplierId]
+      );
+  
+      // Update or insert shop_suppliers entry
+      const [existing] = await connection.execute(
+        `SELECT * FROM shop_suppliers WHERE supplier_id = ?`,
+        [supplierId]
+      );
+  
+      if (existing.length > 0) {
+        await connection.execute(
+          `UPDATE shop_suppliers 
+           SET shop_id = ?, is_active = ? 
+           WHERE supplier_id = ?`,
+          [shop_id, is_active === 'true' ? 1 : 0, supplierId]
+        );
+      } else {
+        await connection.execute(
+          `INSERT INTO shop_suppliers (shop_id, supplier_id, is_active)
+           VALUES (?, ?, ?)`,
+          [shop_id, supplierId, is_active === 'true' ? 1 : 0]
+        );
+      }
+  
+      res.redirect('/suppliers');
+    } catch (err) {
+      console.error("Error updating supplier:", err);
       res.status(500).send('Server error');
     }
   });
