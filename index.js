@@ -193,31 +193,31 @@ async function main() {
         FROM suppliers s
         LEFT JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
       `);
-  
+
       res.render('suppliers', { suppliers });
     } catch (err) {
       console.error("Error loading suppliers:", err);
       res.status(500).send('Server error');
     }
   });
-  
+
   //Create Supplier Route
   app.get('/suppliers/create', async (req, res) => {
     try {
-    
+
       const [shops] = await connection.execute("SELECT shop_id FROM shops");
-  
+
       res.render('suppliers_create', { shops });
     } catch (err) {
       console.error("Error loading supplier form:", err);
       res.status(500).send('Server error');
     }
   });
-  
+
   // Post route for creating a new supplier
   app.post('/suppliers/create', async (req, res) => {
     const { supplier_name, supplier_contact_person, supplier_email, shop_id, is_active } = req.body;
-  
+
     try {
       // Insert into suppliers table
       const [supplierResult] = await connection.execute(
@@ -225,27 +225,27 @@ async function main() {
          VALUES (?, ?, ?)`,
         [supplier_name, supplier_contact_person, supplier_email]
       );
-  
+
       const newSupplierId = supplierResult.insertId;
-  
+
       // Insert into shop_suppliers table
       await connection.execute(
         `INSERT INTO shop_suppliers (shop_id, supplier_id, is_active)
          VALUES (?, ?, ?)`,
         [shop_id, newSupplierId, is_active === 'true' ? 1 : 0]
       );
-  
+
       res.redirect('/suppliers');
     } catch (err) {
       console.error("Error creating supplier:", err);
       res.status(500).send('Server error');
     }
   });
-  
+
   //Get route for updating suppliers 
   app.get('/suppliers/:id/update', async (req, res) => {
     const supplierId = req.params.id;
-  
+
     try {
       const [rows] = await connection.execute(
         `SELECT s.*, ss.shop_id, ss.is_active
@@ -254,14 +254,14 @@ async function main() {
          WHERE s.supplier_id = ?`,
         [supplierId]
       );
-  
+
       if (rows.length === 0) return res.status(404).send('Supplier not found');
-  
+
       const supplier = rows[0];
-  
+
       // Optional: Get all available shop IDs
       const [shops] = await connection.execute("SELECT shop_id FROM shops");
-  
+
       res.render('suppliers_edit', { supplier, shops });
     } catch (err) {
       console.error("Error loading supplier for edit:", err);
@@ -273,7 +273,7 @@ async function main() {
   app.post('/suppliers/:id/update', async (req, res) => {
     const supplierId = req.params.id;
     const { supplier_name, supplier_contact_person, supplier_email, shop_id, is_active } = req.body;
-  
+
     try {
       // Update the suppliers table
       await connection.execute(
@@ -282,13 +282,13 @@ async function main() {
          WHERE supplier_id = ?`,
         [supplier_name, supplier_contact_person || null, supplier_email, supplierId]
       );
-  
+
       // Update or insert shop_suppliers entry
       const [existing] = await connection.execute(
         `SELECT * FROM shop_suppliers WHERE supplier_id = ?`,
         [supplierId]
       );
-  
+
       if (existing.length > 0) {
         await connection.execute(
           `UPDATE shop_suppliers 
@@ -303,41 +303,82 @@ async function main() {
           [shop_id, supplierId, is_active === 'true' ? 1 : 0]
         );
       }
-  
+
       res.redirect('/suppliers');
     } catch (err) {
       console.error("Error updating supplier:", err);
       res.status(500).send('Server error');
     }
   });
-  
+
 
   //GET Supplier Ordering
-  app.get('/suppliers/:supplier_id/ordering', async (req, res) => {
-    const supplierId = req.params.supplier_id;
+  app.get('/suppliers/:id/ordering', async (req, res) => {
+    const supplierId = req.params.id;
 
     try {
-      // Query the shop, supplier, and possibly existing orders
-      const [supplierData] = await connection.execute(`
-        SELECT s.supplier_id, s.supplier_name, s.supplier_email, ss.is_active, sh.shop_id, sh.shop_name
+      const [supplierRows] = await connection.execute(`
+        SELECT 
+          s.supplier_id,
+          s.supplier_name,
+          s.supplier_email,
+          ss.is_active,
+          sh.shop_name
         FROM suppliers s
         JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
         JOIN shops sh ON ss.shop_id = sh.shop_id
         WHERE s.supplier_id = ?
       `, [supplierId]);
 
-      if (supplierData.length === 0) {
-        return res.status(404).send('Supplier not found or not linked to any shop');
+      const [shops] = await connection.execute(
+        `SELECT shop_id, shop_name FROM shops`
+      );
+
+      if (!supplierRows.length) {
+        return res.status(404).send('Supplier not found');
       }
 
-      // You may also join with `supplier_order_items` if needed
-
-      res.render('supplier_ordering', {
-        supplier: supplierData[0]
-      });
+      const supplier = supplierRows[0];
+      res.render('supplier_place_order', { supplier, shops });
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Server Error');
+      console.error("Error loading supplier order form:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+
+  //Post route for supplier ordered items
+  app.post('/suppliers/:id/order', async (req, res) => {
+    const supplierId = req.params.id;
+    const { SKU_num, desc_item, quantity, unit_price, unit_of_measurement } = req.body;
+
+
+    try {
+      // Insert supplier order
+      const [orderResult] = await connection.execute(
+        `INSERT INTO supplier_order_items (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_of_measurement[i], unit_price[i]]
+      );
+
+      const orderId = orderResult.insertId;
+
+      // Handle items
+      const count = Array.isArray(desc_item) ? desc_item.length : 0;
+      for (let i = 0; i < count; i++) {
+        if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i]) {
+          await connection.execute(
+            `INSERT INTO supplier_order_items (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_price)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_price[i]]
+          );
+        }
+      }
+
+      res.redirect(`/suppliers/${supplierId}/ordering`);
+    } catch (err) {
+      console.error("❌ Error placing supplier order:", err);
+      res.status(500).send('Server error');
     }
   });
 
