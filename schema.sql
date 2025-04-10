@@ -62,28 +62,35 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
     supply_deli_date TIMESTAMP NULL,
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     supply_total_amount DECIMAL(10,2),
+    Tax decimal(10,2) DEFAULT '0.09',
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
    FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE,
-   FOREIGN KEY (order_item_id) REFERENCES supplier_order_items(order_item_id) ON DELETE CASCADE,
-   FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE,
+   FOREIGN KEY (order_item_id) REFERENCES supplier_order_items(order_item_id) ON DELETE CASCADE
+   
 )engine = innodb;
 
 
-CREATE TABLE IF NOT EXISTS supplier_order_items (
-    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    SKU_num VARCHAR(16),
-    desc_item VARCHAR(100) NOT NULL,
-    quantity DECIMAL(10,2) NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    unit_of_measurement VARCHAR(20) DEFAULT 'unit'
-
-)engine = innodb;
-    
-    
-    FOREIGN KEY (supplier_id) REFERENCES suppliers (supplier_id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS supplier_order_items(
+  order_item_id int NOT NULL AUTO_INCREMENT,
+  SKU_num varchar(16) DEFAULT NULL,
+  desc_item varchar(100) NOT NULL,
+  quantity decimal(10,2) NOT NULL,
+  unit_price decimal(10,2) NOT NULL,
+  received_quantity decimal(10,2) DEFAULT '0.00',
+  status enum('pending','partially_received','completed') DEFAULT 'pending',
+  supply_order_id int DEFAULT NULL,
+  inv_item_id int DEFAULT NULL,
+  supplier_id int DEFAULT NULL,
+  unit_of_measurement varchar(20) DEFAULT 'unit',
+  PRIMARY KEY (`order_item_id`),
+  KEY `fk_supply_suppliers_order_item` (`inv_item_id`),
+  KEY `fk_supplier_item` (`supplier_id`),
+  CONSTRAINT `fk_supplier_item` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`supplier_id`),
+  CONSTRAINT `fk_supply_suppliers_order_item` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory_items` (`inv_item_id`)
+) ENGINE=InnoDB DEFAULT 
 
 
 

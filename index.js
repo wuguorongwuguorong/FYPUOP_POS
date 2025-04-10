@@ -8,6 +8,15 @@ const XLSX = require('xlsx');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'octopusroti123@gmail.com',
+    pass: 'zjbv ouxa eoxc yshf'  // Gamil app password
+  }
+});
 
 let app = express();
 app.use(cors());
@@ -348,7 +357,7 @@ async function main() {
 
 
   //Post route for supplier ordered items
-  app.post('/suppliers/:id/order', async (req, res) => {
+  app.post('/suppliers/:id/ordering', async (req, res) => {
     const supplierId = req.params.id;
     const { SKU_num, desc_item, quantity, unit_price, unit_of_measurement } = req.body;
 
@@ -356,11 +365,12 @@ async function main() {
     try {
       // Insert supplier order
       const [orderResult] = await connection.execute(
-        `INSERT INTO supplier_order_items (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_of_measurement[i], unit_price[i]]
+        `INSERT INTO supplier_orders (supplier_id, shop_id, supply_total_amount, notes)
+         VALUES (?, ?, ?, ?)`,
+        [supplierId, shop_id, supply_total_amount || 0, notes || null]
       );
 
+      // ✅ Define orderId AFTER this line
       const orderId = orderResult.insertId;
 
       // Handle items
@@ -374,6 +384,44 @@ async function main() {
           );
         }
       }
+      const [supplierData] = await connection.execute(
+        `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
+        [supplierId]
+      );
+
+      // Fetch inserted order items
+      const [items] = await connection.execute(
+        `SELECT desc_item, quantity, unit_price, unit_of_measurement 
+         FROM supplier_order_items 
+         WHERE supply_order_id = ?`,
+        [orderId]
+      );
+
+      // Build email HTML or plain text
+      let itemList = items.map(item =>
+        `<li>${item.desc_item} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
+      ).join('');
+
+      const mailOptions = {
+        from: '"ABC Company" <octupusroti123@gmail.com>',
+        to: supplierData[0].supplier_email,
+        subject: `New Order from Your Company - Order #${orderId}`,
+        html: `
+          <h3>Dear ${supplierData[0].supplier_name},</h3>
+          <p>We have placed a new order. Here are the details:</p>
+          <ul>${itemList}</ul>
+          <p>Thank you!</p>
+        `
+      };
+
+      // Send the email
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("❌ Email failed to send:", error);
+        } else {
+          console.log("✅ Email sent:", info.response);
+        }
+      });
 
       res.redirect(`/suppliers/${supplierId}/ordering`);
     } catch (err) {
