@@ -367,7 +367,7 @@ async function main() {
       const [orderResult] = await connection.execute(
         `INSERT INTO supplier_orders (supplier_id, shop_id, supply_total_amount, notes)
          VALUES (?, ?, ?, ?)`,
-        [supplierId, shop_id, supply_total_amount || 0, notes || null]
+        [supplierId, shop_name, supply_total_amount || 0, notes || null]
       );
 
       // ✅ Define orderId AFTER this line
@@ -378,9 +378,9 @@ async function main() {
       for (let i = 0; i < count; i++) {
         if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i]) {
           await connection.execute(
-            `INSERT INTO supplier_order_items (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_price)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_price[i]]
+            `INSERT INTO supplier_order_items (supply_order_id, supplier_name, SKU_num, desc_item, quantity, unit_price, unit_of_measurement)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_price[i],unit_of_measurement[i]]
           );
         }
       }
