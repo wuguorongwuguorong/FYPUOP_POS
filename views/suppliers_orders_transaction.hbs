@@ -1,0 +1,77 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+
+<h2 class="mt-4 mb-3">Supplier Order Receipt</h2>
+<hr>
+
+<div class="mb-3">
+  <p><strong>Order ID:</strong> {{order.supply_order_id}}</p>
+  <p><strong>Order Date:</strong> {{formatDate order.supply_order_date}}</p>
+  <p><strong>Status:</strong> 
+    <span class="badge 
+      {{#if (eq order.status 'pending')}}bg-warning
+      {{else if (eq order.status 'in_progress')}}bg-info
+      {{else if (eq order.status 'completed')}}bg-success
+      {{else}}bg-danger{{/if}}">
+      {{order.status}}
+    </span>
+  </p>
+  <p><strong>Notes:</strong> {{order.notes}}</p>
+</div>
+
+<div class="mb-3">
+  <h5>Supplier Info</h5>
+  <p><strong>Name:</strong> {{order.supplier_name}}</p>
+  <p><strong>Email:</strong> {{order.supplier_email}}</p>
+</div>
+
+<div class="mb-3">
+  <h5>Shop Info</h5>
+  <p><strong>Shop Name:</strong> {{order.shop_name}}</p>
+  <p><strong>Address:</strong> {{order.shop_address_1}}, {{order.shop_address_2}}</p>
+</div>
+
+<hr>
+
+<h4 class="mt-4">Ordered Items</h4>
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>SKU</th>
+      <th>Description</th>
+      <th>Quantity</th>
+      <th>Unit</th>
+      <th>Unit Price</th>
+      <th>Subtotal</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each items}}
+    <tr>
+      <td>{{this.SKU_num}}</td>
+      <td>{{this.desc_item}}</td>
+      <td>{{this.quantity}}</td>
+      <td>{{this.unit_of_measurement}}</td>
+      <td>${{this.unit_price}}</td>
+      <td>${{multiply this.quantity this.unit_price}} </td>
+      <td>{{this.status}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+<hr>
+
+<h5 class="text-end">
+  <strong>Total Before Tax:</strong> ${{order.supply_total_amount}}<br>
+  <strong>Tax ({{order.tax}}):</strong> ${{multiply order.supply_total_amount order.tax}}<br>
+  <strong>Grand Total:</strong> ${{addTax order.supply_total_amount order.tax}}
+</h5>
+
+<a href="/suppliers/{{order.supplier_id}}/ordering" class="btn btn-secondary mt-4">Back to Supplier Orders</a>
+
+{{/block}}
+
+{{/extends}}

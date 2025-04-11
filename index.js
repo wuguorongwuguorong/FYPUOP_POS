@@ -10,13 +10,6 @@ const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'octopusroti123@gmail.com',
-    pass: 'zjbv ouxa eoxc yshf'  // Gamil app password
-  }
-});
 
 let app = express();
 app.use(cors());
@@ -33,6 +26,21 @@ hbs.registerHelper('ifEquals', function (arg1, arg2, options) {
   return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
 });
 
+hbs.registerHelper('multiply', (a, b) => {
+  const n1 = parseFloat(a);
+  const n2 = parseFloat(b);
+  if (isNaN(n1) || isNaN(n2)) return '0.00';
+  return (n1 * n2).toFixed(2);
+});
+
+hbs.registerHelper('addTax', (subtotal, taxRate) => {
+  const sub = parseFloat(subtotal);
+  const tax = parseFloat(taxRate);
+  if (isNaN(sub) || isNaN(tax)) return '0.00';
+  return (sub + sub * tax).toFixed(2);
+});
+
+hbs.registerHelper('eq', (a, b) => a === b);
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -50,6 +58,14 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'octopusroti123@gmail.com',
+    pass: 'zjbvouxaeoxcyshf'  // Gamil app password
   }
 });
 
@@ -359,37 +375,83 @@ async function main() {
   //Post route for supplier ordered items
   app.post('/suppliers/:id/ordering', async (req, res) => {
     const supplierId = req.params.id;
-    const { SKU_num, desc_item, quantity, unit_price, unit_of_measurement } = req.body;
-
+    const {
+      shop_id,
+      supply_total_amount,
+      notes,
+      SKU_num,
+      desc_item,
+      quantity,
+      unit_price,
+      unit_of_measurement
+    } = req.body;
 
     try {
-      // Insert supplier order
+      // ✅ Check supplier-shop relationship
+      const [validLinks] = await connection.execute(`
+        SELECT ss.shop_supplier_id
+        FROM shop_suppliers ss
+        WHERE ss.supplier_id = ? AND ss.shop_id = ?
+      `, [supplierId, shop_id]);
+
+      if (!validLinks.length) {
+        return res.status(400).send('Invalid supplier-shop relationship.');
+      }
+
+      // ✅ Insert into supplier_orders
       const [orderResult] = await connection.execute(
         `INSERT INTO supplier_orders (supplier_id, shop_id, supply_total_amount, notes)
          VALUES (?, ?, ?, ?)`,
-        [supplierId, shop_name, supply_total_amount || 0, notes || null]
+        [supplierId, shop_id, supply_total_amount || 0, notes || null]
       );
 
-      // ✅ Define orderId AFTER this line
       const orderId = orderResult.insertId;
 
-      // Handle items
-      const count = Array.isArray(desc_item) ? desc_item.length : 0;
-      for (let i = 0; i < count; i++) {
-        if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i]) {
-          await connection.execute(
-            `INSERT INTO supplier_order_items (supply_order_id, supplier_name, SKU_num, desc_item, quantity, unit_price, unit_of_measurement)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [orderId, supplierId, SKU_num[i], desc_item[i], quantity[i], unit_price[i],unit_of_measurement[i]]
-          );
+      // ✅ Insert order items
+      if (Array.isArray(desc_item)) {
+        for (let i = 0; i < desc_item.length; i++) {
+          if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
+            await connection.execute(
+              `INSERT INTO supplier_order_items 
+              (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                orderId,
+                supplierId,
+                SKU_num[i],
+                desc_item[i],
+                quantity[i],
+                unit_of_measurement[i],
+                unit_price[i]
+              ]
+            );
+          }
         }
+      } else if (desc_item) {
+        // handle single-item order (not in array)
+        await connection.execute(
+          `INSERT INTO supplier_order_items 
+          (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId,
+            supplierId,
+            SKU_num,
+            desc_item,
+            quantity,
+            unit_of_measurement,
+            unit_price
+          ]
+        );
       }
+
+
+      // ✅ Fetch supplier email for email notification
       const [supplierData] = await connection.execute(
         `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
         [supplierId]
       );
 
-      // Fetch inserted order items
       const [items] = await connection.execute(
         `SELECT desc_item, quantity, unit_price, unit_of_measurement 
          FROM supplier_order_items 
@@ -397,8 +459,7 @@ async function main() {
         [orderId]
       );
 
-      // Build email HTML or plain text
-      let itemList = items.map(item =>
+      const itemList = items.map(item =>
         `<li>${item.desc_item} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
       ).join('');
 
@@ -414,7 +475,6 @@ async function main() {
         `
       };
 
-      // Send the email
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error("❌ Email failed to send:", error);
@@ -423,9 +483,47 @@ async function main() {
         }
       });
 
-      res.redirect(`/suppliers/${supplierId}/ordering`);
+      res.redirect(`/supplier-orders/${orderId}/transaction`);
     } catch (err) {
       console.error("❌ Error placing supplier order:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  //GET route for transaction
+  app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
+    const orderId = req.params.orderId;
+
+    try {
+      const [orderRows] = await connection.execute(`
+        SELECT 
+          so.*, 
+          s.supplier_name, 
+          s.supplier_email,
+          sh.shop_name,
+          sh.shop_address_1,
+          sh.shop_address_2
+        FROM supplier_orders so
+        JOIN suppliers s ON so.supplier_id = s.supplier_id
+        JOIN shops sh ON so.shop_id = sh.shop_id
+        WHERE so.supply_order_id = ?
+      `, [orderId]);
+
+      if (!orderRows.length) {
+        return res.status(404).send('Order not found');
+      }
+
+      const [items] = await connection.execute(`
+        SELECT SKU_num, desc_item, quantity, unit_price, unit_of_measurement, status
+        FROM supplier_order_items
+        WHERE supply_order_id = ?
+      `, [orderId]);
+
+      const order = orderRows[0];
+
+      res.render('suppliers_orders_transaction', { order, items });
+    } catch (err) {
+      console.error("❌ Error fetching transaction summary:", err);
       res.status(500).send('Server error');
     }
   });

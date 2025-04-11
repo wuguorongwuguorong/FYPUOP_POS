@@ -18,7 +18,7 @@
     <label for="shop_id">Select Shop</label>
     <select name="shop_id" class="form-control" required>
       {{#each shops}}
-      <option value={{this.shop_name}}</option>
+      <option value="{{this.shop_id}}">{{this.shop_name}}</option>
       {{/each}}
     </select>
   </div>
