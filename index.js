@@ -10,12 +10,19 @@ const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
-
 let app = express();
 app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
+
+waxOn.on(hbs.handlebars);
+waxOn.setLayoutPath('./views/layouts');
+
+// Include the 188 handlebar helpers
+const helpers = require('handlebars-helpers')({
+  handlebars: hbs.handlebars
+});
 
 hbs.registerHelper('formatDate', function (datetime) {
   const date = new Date(datetime);
@@ -41,14 +48,6 @@ hbs.registerHelper('addTax', (subtotal, taxRate) => {
 });
 
 hbs.registerHelper('eq', (a, b) => a === b);
-
-waxOn.on(hbs.handlebars);
-waxOn.setLayoutPath('./views/layouts');
-
-// Include the 188 handlebar helpers
-const helpers = require('handlebars-helpers')({
-  handlebars: hbs.handlebars
-});
 
 // configure multer storage
 const storage = multer.diskStorage({
@@ -386,6 +385,13 @@ async function main() {
       unit_of_measurement
     } = req.body;
 
+    console.log("🧾 Items submitted:", {
+      desc_item,
+      quantity,
+      unit_price,
+      unit_of_measurement,
+      SKU_num
+    });
     try {
       // ✅ Check supplier-shop relationship
       const [validLinks] = await connection.execute(`
@@ -445,6 +451,7 @@ async function main() {
         );
       }
 
+      console.log("✅ New order ID:", orderId);
 
       // ✅ Fetch supplier email for email notification
       const [supplierData] = await connection.execute(

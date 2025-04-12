@@ -67,9 +67,7 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-   FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE,
-   FOREIGN KEY (order_item_id) REFERENCES supplier_order_items(order_item_id) ON DELETE CASCADE
-   
+   FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE
 )engine = innodb;
 
 
