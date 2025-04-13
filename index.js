@@ -9,12 +9,13 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const { truncate } = require('fs/promises');
 
 let app = express();
 app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -393,7 +394,6 @@ async function main() {
       SKU_num
     });
     try {
-      // ✅ Check supplier-shop relationship
       const [validLinks] = await connection.execute(`
         SELECT ss.shop_supplier_id
         FROM shop_suppliers ss
@@ -404,7 +404,6 @@ async function main() {
         return res.status(400).send('Invalid supplier-shop relationship.');
       }
 
-      // ✅ Insert into supplier_orders
       const [orderResult] = await connection.execute(
         `INSERT INTO supplier_orders (supplier_id, shop_id, supply_total_amount, notes)
          VALUES (?, ?, ?, ?)`,
@@ -412,8 +411,6 @@ async function main() {
       );
 
       const orderId = orderResult.insertId;
-
-      // ✅ Insert order items
       if (Array.isArray(desc_item)) {
         for (let i = 0; i < desc_item.length; i++) {
           if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
@@ -453,7 +450,6 @@ async function main() {
 
       console.log("✅ New order ID:", orderId);
 
-      // ✅ Fetch supplier email for email notification
       const [supplierData] = await connection.execute(
         `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
         [supplierId]
