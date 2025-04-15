@@ -328,7 +328,6 @@ async function main() {
     }
   });
 
-
   //GET Supplier Ordering
   app.get('/suppliers/:id/ordering', async (req, res) => {
     const supplierId = req.params.id;
@@ -362,7 +361,6 @@ async function main() {
       res.status(500).send('Server error');
     }
   });
-
 
   //Post route for supplier ordered items
   app.post('/suppliers/:id/ordering', async (req, res) => {
@@ -472,7 +470,7 @@ async function main() {
       const mailOptions = {
         from: '"ABC Company" <octupusroti123@gmail.com>',
         //to: supplierData[0].supplier_email,
-        to:'daniel.stillpixels@gmail.com',
+        to: 'daniel.stillpixels@gmail.com',
         subject: `New Order from Your Company - Order #${orderId}`,
         html: `
           <h3>Dear ${supplierData[0].supplier_name},</h3>
@@ -536,32 +534,101 @@ async function main() {
     }
   });
 
-//GET route for all pending or completed
-app.get('/supplier-orders/transaction', async (req, res) => {
-  try {
-    const [orders] = await connection.execute(`
+  //GET route for all pending or completed
+  app.get('/supplier-orders/transaction', async (req, res) => {
+    const sortOrder = req.query.sort === 'asc' ? 'ASC' : 'DESC';
+    const { start_date, end_date } = req.query;
+
+    let query = `
+    SELECT 
+      so.supply_order_id,
+      so.supply_order_date,
+      su.supplier_name,
+      sh.shop_email,
+      soi.order_item_id,
+      soi.desc_item,
+      soi.quantity,
+      soi.unit_price,
+      soi.status
+    FROM supplier_orders so
+    JOIN shops sh ON so.shop_id = sh.shop_id
+    JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
+    JOIN suppliers su ON so.supplier_id =su.supplier_id
+    WHERE soi.status != 'completed'
+  `;
+
+    const params = [];
+
+    // Apply date filter if both dates are provided
+    if (start_date && end_date) {
+      query += ` WHERE DATE(so.supply_order_date) BETWEEN ? AND ?`;
+      params.push(start_date, end_date);
+    }
+
+    query += ` ORDER BY so.supply_order_date ${sortOrder}`;
+
+    try {
+      const [orders] = await connection.execute(query, params);
+      res.render('supplier_orders_transaction_all', { orders, sortOrder, start_date, end_date });
+    } catch (err) {
+      console.error("❌ Failed to load supplier order transactions:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  //POST route to show completed items
+  app.post('/supplier-orders/item/:id/status', async (req, res) => {
+    const itemId = req.params.id;
+    const { status, redirect } = req.body;
+
+    try {
+      await connection.execute(
+        `UPDATE supplier_order_items SET status = ? WHERE order_item_id = ?`,
+        [status, itemId]
+      );
+
+      console.log(`✅ Item ${itemId} status updated to "${status}"`);
+
+      // ✅ Redirect back to previous page with filters
+      if (redirect) {
+        return res.redirect(redirect);
+      }
+
+      res.redirect('/supplier-orders/transaction');
+    } catch (err) {
+      console.error("❌ Failed to update status:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  //GET route to show completed transaction
+  app.get('/supplier-orders/completed', async (req, res) => {
+    try {
+      const [completedOrders] = await connection.execute(`
       SELECT 
         so.supply_order_id,
         so.supply_order_date,
-        sh.shop_name,
+        su.supplier_name,
         sh.shop_email,
         soi.order_item_id,
         soi.desc_item,
         soi.quantity,
         soi.unit_price,
         soi.status
-      FROM supplier_orders so
-      JOIN shops sh ON so.shop_id = sh.shop_id
-      JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
-      ORDER BY so.supply_order_date ASC
+       FROM supplier_orders so
+       JOIN shops sh ON so.shop_id = sh.shop_id
+       JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
+       JOIN suppliers su ON so.supplier_id =su.supplier_id
+       WHERE soi.status = 'completed'
+       ORDER BY so.supply_order_date ASC
     `);
 
-    res.render('supplier_orders_transaction_all', { orders });
-  } catch (err) {
-    console.error("❌ Failed to load supplier order transactions:", err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('supplier_orders_completed', { completedOrders });
+    } catch (err) {
+      console.error("❌ Failed to load completed orders:", err);
+      res.status(500).send('Server error');
+    }
+  });
 
 
 

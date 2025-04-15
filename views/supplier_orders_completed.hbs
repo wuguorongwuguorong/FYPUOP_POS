@@ -1,0 +1,42 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<h2 class="mt-4 mb-3">✅ Completed Supplier Orders</h2>
+
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th>Supplier</th>
+            <th>Order Date</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Subtotal</th>
+            <th>Tax (9%)</th>
+            <th>Total w/ Tax</th>
+            <th>Status</th>
+
+        </tr>
+    </thead>
+    <tbody>
+        {{#each completedOrders}}
+        <tr>
+            <td>{{this.supplier_name}}</td>
+            <td>{{formatDate this.supply_order_date}}</td>
+            <td>{{this.desc_item}}</td>
+            <td>{{this.quantity}}</td>
+            <td>${{this.unit_price}}</td>
+            <td>${{multiply this.quantity this.unit_price}}</td>
+            <td> ${{multiply (multiply this.quantity this.unit_price) 0.09}} </td>
+            <td> ${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price)
+                0.09)}} </td>
+            <td><span class="badge bg-success text-white">{{this.status}}</span></td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+
+
+{{/block}}
+
+{{/extends}}

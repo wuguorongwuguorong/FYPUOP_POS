@@ -3,44 +3,74 @@
 
 <h2 class="mt-4 mb-3">Supplier Order Transactions</h2>
 
+<form method="GET" action="/supplier-orders/transaction" class="row g-3 mb-3">
+    <div class="col-md-3">
+        <label for="start_date" class="form-label">Start Date</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" value="{{start_date}}">
+    </div>
+    <div class="col-md-3">
+        <label for="end_date" class="form-label">End Date</label>
+        <input type="date" id="end_date" name="end_date" class="form-control" value="{{end_date}}">
+    </div>
+    <div class="col-md-3">
+        <label for="sort" class="form-label">Sort</label>
+        <select name="sort" id="sort" class="form-select">
+            <option value="asc" {{#if (eq sortOrder "ASC" )}}selected{{/if}}>Oldest to Newest</option>
+            <option value="desc" {{#if (eq sortOrder "DESC" )}}selected{{/if}}>Newest to Oldest</option>
+        </select>
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">Filter</button>
+    </div>
+</form>
+
 <table class="table table-bordered">
-  <thead class="table-light">
-    <tr>
-      <th>Shop Name</th>
-      <th>Email</th>
-      <th>Order Date</th>
-      <th>Item</th>
-      <th>Quantity</th>
-      <th>Unit Price</th>
-      <th>Status</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each orders}}
-    <tr>
-      <td>{{this.shop_name}}</td>
-      <td>{{this.shop_email}}</td>
-      <td>{{formatDate this.supply_order_date}}</td>
-      <td>{{this.desc_item}}</td>
-      <td>{{this.quantity}}</td>
-      <td>${{this.unit_price}}</td>
-      <td>
-        <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST">
-          <select name="status" class="form-select form-select-sm">
-            <option value="pending" {{#if (eq this.status "pending")}}selected{{/if}}>Pending</option>
-            <option value="partially_received" {{#if (eq this.status "partially_received")}}selected{{/if}}>Partially Received</option>
-            <option value="completed" {{#if (eq this.status "completed")}}selected{{/if}}>Completed</option>
-            <option value="cancelled" {{#if (eq this.status "cancelled")}}selected{{/if}}>Cancelled</option>
-          </select>
-      </td>
-      <td>
-          <button type="submit" class="btn btn-sm btn-primary">Update</button>
-        </form>
-      </td>
-    </tr>
-    {{/each}}
-  </tbody>
+    <thead class="table-light">
+        <tr>
+            <th>Supplier</th>
+            <th>Order Date</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Subtotal</th>
+            <th>Tax (9%)</th>
+            <th>Total w/ Tax</th>
+            <th>Status</th>
+            <th>Action</th>
+    </thead>
+    <tbody>
+        {{#each orders}}
+        <tr>
+
+            <td>{{this.supplier_name}}</td>
+            <td>{{formatDate this.supply_order_date}}</td>
+            <td>{{this.desc_item}}</td>
+            <td>{{this.quantity}}</td>
+            <td>${{this.unit_price}}</td>
+            <td>${{multiply this.quantity this.unit_price}}</td>
+            <td> ${{multiply (multiply this.quantity this.unit_price) 0.09}} </td> 
+            <td> ${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price) 0.09)}} </td>
+            <td>
+                <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST">
+                    <input type="hidden" name="redirect"
+                        value="/supplier-orders/transaction?sort={{../sortOrder}}&start_date={{../start_date}}&end_date={{../end_date}}">
+                    <select name="status" class="form-select form-select-sm me-2">
+                        <option value="pending" {{#if (eq this.status "pending" )}}selected{{/if}}>Pending</option>
+                        <option value="partially_received" {{#if (eq this.status "partially_received"
+                            )}}selected{{/if}}>Partially Received</option>
+                        <option value="completed" {{#if (eq this.status "completed" )}}selected{{/if}}>Completed
+                        </option>
+                        <option value="cancelled" {{#if (eq this.status "cancelled" )}}selected{{/if}}>Cancelled
+                        </option>
+                    </select>
+            </td>
+            <td>
+                <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                </form>
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
 </table>
 
 {{/block}}
