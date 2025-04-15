@@ -496,7 +496,7 @@ async function main() {
     }
   });
 
-  //GET route for transaction
+  //GET route to show all transaction after submitting
   app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
     const orderId = req.params.orderId;
 
@@ -534,7 +534,7 @@ async function main() {
     }
   });
 
-  //GET route for all pending or completed
+  //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
     const sortOrder = req.query.sort === 'asc' ? 'ASC' : 'DESC';
     const { start_date, end_date } = req.query;
@@ -554,7 +554,8 @@ async function main() {
     JOIN shops sh ON so.shop_id = sh.shop_id
     JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
     JOIN suppliers su ON so.supplier_id =su.supplier_id
-    WHERE soi.status != 'completed'
+    WHERE soi.status NOT IN ('completed', 'cancelled')
+
   `;
 
     const params = [];
@@ -576,30 +577,40 @@ async function main() {
     }
   });
 
-  //POST route to show completed items
-  app.post('/supplier-orders/item/:id/status', async (req, res) => {
-    const itemId = req.params.id;
-    const { status, redirect } = req.body;
+  //POST route after selecting individual row from pending to completed
+  app.post('/supplier-orders/item/:order_item_id/status', async (req, res) => {
+    const orderItemId = req.params.order_item_id;
+    const { status, notes } = req.body;
+    const redirectUrl = req.query.order
+      ? `/supplier-orders/transaction`
+      : req.body.redirect || '/supplier-orders/transaction';
 
     try {
+      // 1. Update the status in supplier_order_items
       await connection.execute(
         `UPDATE supplier_order_items SET status = ? WHERE order_item_id = ?`,
-        [status, itemId]
+        [status, orderItemId]
       );
 
-      console.log(`✅ Item ${itemId} status updated to "${status}"`);
-
-      // ✅ Redirect back to previous page with filters
-      if (redirect) {
-        return res.redirect(redirect);
+      // 2. If status is 'cancelled' and note is provided, update the main order table
+      if (status === 'cancelled' && notes) {
+        await connection.execute(
+          `UPDATE supplier_orders 
+           SET status = ?, notes = ?, updated_at = NOW()
+           WHERE supply_order_id = (
+              SELECT supply_order_id FROM supplier_order_items WHERE order_item_id = ?
+           )`,
+          [status, notes, orderItemId]
+        );
       }
 
-      res.redirect('/supplier-orders/transaction');
+      res.redirect(redirectUrl);
     } catch (err) {
       console.error("❌ Failed to update status:", err);
       res.status(500).send('Server error');
     }
   });
+
 
   //GET route to show completed transaction
   app.get('/supplier-orders/completed', async (req, res) => {
@@ -630,6 +641,53 @@ async function main() {
     }
   });
 
+  app.get('/supplier-orders/cancelled', async (req, res) => {
+    try {
+      const [cancelledOrders] = await connection.execute(`
+        SELECT 
+          s.supplier_name,
+          so.status,
+          so.notes,
+          so.updated_at
+        FROM supplier_orders so
+        JOIN suppliers s ON so.supplier_id = s.supplier_id
+        WHERE so.status = 'cancelled'
+        ORDER BY so.updated_at DESC
+      `);
+
+      res.render('supplier_orders_cancellation', { cancelledOrders });
+    } catch (err) {
+      console.error("❌ Failed to load cancelled orders:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+
+  //POST route for cancellation of item
+  app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
+    const itemId = req.params.itemId;
+    const { status, redirect, notes } = req.body;
+    const supplyOrderId = req.query.order;
+
+    try {
+      await connection.execute(
+        `UPDATE supplier_order_items SET status = ? WHERE order_item_id = ?`,
+        [status, itemId]
+      );
+
+      if (status === 'cancelled' && notes) {
+        await connection.execute(
+          `UPDATE supplier_orders SET notes = ? WHERE supply_order_id = ?`,
+          [notes, supplyOrderId]
+        );
+      }
+
+      res.redirect(redirect || '/supplier-orders/transaction');
+    } catch (err) {
+      console.error("❌ Failed to update status or note:", err);
+      res.status(500).send('Server error');
+    }
+  });
 
 
 

@@ -48,10 +48,12 @@
             <td>{{this.quantity}}</td>
             <td>${{this.unit_price}}</td>
             <td>${{multiply this.quantity this.unit_price}}</td>
-            <td> ${{multiply (multiply this.quantity this.unit_price) 0.09}} </td> 
-            <td> ${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price) 0.09)}} </td>
+            <td> ${{multiply (multiply this.quantity this.unit_price) 0.09}} </td>
+            <td> ${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price)
+                0.09)}} </td>
             <td>
-                <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST">
+                <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST" class="status-form"
+                    data-order-id="{{this.order_item_id}}" data-order="{{this.supply_order_id}}">
                     <input type="hidden" name="redirect"
                         value="/supplier-orders/transaction?sort={{../sortOrder}}&start_date={{../start_date}}&end_date={{../end_date}}">
                     <select name="status" class="form-select form-select-sm me-2">
@@ -72,6 +74,77 @@
         {{/each}}
     </tbody>
 </table>
+
+{{!--
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.status-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const status = form.querySelector('select[name="status"]').value;
+                const orderItemId = form.getAttribute('data-order-id');
+                const supplyOrderId = form.getAttribute('data-order');
+
+                if (status === 'cancelled') {
+                    e.preventDefault(); // Stop the form submission
+
+                    const modal = new bootstrap.Modal(document.getElementById('cancelReasonModal'));
+                    document.getElementById('cancelReasonForm').action =
+                        `/supplier-orders/item/${orderItemId}/status?order=${supplyOrderId}`;
+                    modal.show();
+                }
+            });
+        });
+    });
+</script> --}}
+<!-- Cancel Reason Modal -->
+<div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="cancelReasonForm" method="POST">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Reason for Cancellation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea name="notes" class="form-control" required
+                        placeholder="Enter cancellation reason..."></textarea>
+                    <input type="hidden" name="status" value="cancelled">
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Submit Cancellation</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.status-form').forEach(form => {
+      form.addEventListener('submit', function (e) {
+        const status = form.querySelector('select').value;
+        const orderItemId = form.getAttribute('data-order-id');
+        const supplyOrderId = form.getAttribute('data-order');
+
+        if (status === 'cancelled') {
+          e.preventDefault();
+
+          const modalEl = document.getElementById('cancelReasonModal');
+          const cancelForm = document.getElementById('cancelReasonForm');
+
+          cancelForm.action = `/supplier-orders/item/${orderItemId}/status?order=${supplyOrderId}`;
+
+          const modalInstance = new bootstrap.Modal(modalEl);
+          modalInstance.show();
+        }
+      });
+    });
+  });
+</script>
+
+
+
 
 {{/block}}
 {{/extends}}
