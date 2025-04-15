@@ -61,14 +61,6 @@ const storage = multer.diskStorage({
   }
 });
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'octopusroti123@gmail.com',
-    pass: 'zjbvouxaeoxcyshf'  // Gamil app password
-  }
-});
-
 const upload = multer({ storage: storage });
 
 async function main() {
@@ -448,7 +440,7 @@ async function main() {
         );
       }
 
-      console.log("✅ New order ID:", orderId);
+      console.log("New order ID:", orderId);
 
       const [supplierData] = await connection.execute(
         `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
@@ -456,19 +448,31 @@ async function main() {
       );
 
       const [items] = await connection.execute(
-        `SELECT desc_item, quantity, unit_price, unit_of_measurement 
+        `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
          FROM supplier_order_items 
          WHERE supply_order_id = ?`,
         [orderId]
       );
 
       const itemList = items.map(item =>
-        `<li>${item.desc_item} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
+        `<li>${item.desc_item} ${item.SKU_num} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
       ).join('');
+
+
+      const transporter = nodemailer.createTransport({
+        host: "sandbox.smtp.mailtrap.io",
+        port: 2525,
+        auth: {
+          user: "932d99f01e8c4e",
+          pass: "0ee68c955b8d67"
+        }
+      });
+
 
       const mailOptions = {
         from: '"ABC Company" <octupusroti123@gmail.com>',
-        to: supplierData[0].supplier_email,
+        //to: supplierData[0].supplier_email,
+        to:'daniel.stillpixels@gmail.com',
         subject: `New Order from Your Company - Order #${orderId}`,
         html: `
           <h3>Dear ${supplierData[0].supplier_name},</h3>
@@ -483,12 +487,13 @@ async function main() {
           console.error("❌ Email failed to send:", error);
         } else {
           console.log("✅ Email sent:", info.response);
+          console.log("🔍 Preview URL:", nodemailer.getTestMessageUrl(info));
         }
       });
 
       res.redirect(`/supplier-orders/${orderId}/transaction`);
     } catch (err) {
-      console.error("❌ Error placing supplier order:", err);
+      console.error("Error placing supplier order:", err);
       res.status(500).send('Server error');
     }
   });
@@ -526,10 +531,38 @@ async function main() {
 
       res.render('suppliers_orders_transaction', { order, items });
     } catch (err) {
-      console.error("❌ Error fetching transaction summary:", err);
+      console.error("Error fetching transaction summary:", err);
       res.status(500).send('Server error');
     }
   });
+
+//GET route for all pending or completed
+app.get('/supplier-orders/transaction', async (req, res) => {
+  try {
+    const [orders] = await connection.execute(`
+      SELECT 
+        so.supply_order_id,
+        so.supply_order_date,
+        sh.shop_name,
+        sh.shop_email,
+        soi.order_item_id,
+        soi.desc_item,
+        soi.quantity,
+        soi.unit_price,
+        soi.status
+      FROM supplier_orders so
+      JOIN shops sh ON so.shop_id = sh.shop_id
+      JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
+      ORDER BY so.supply_order_date ASC
+    `);
+
+    res.render('supplier_orders_transaction_all', { orders });
+  } catch (err) {
+    console.error("❌ Failed to load supplier order transactions:", err);
+    res.status(500).send('Server error');
+  }
+});
+
 
 
 

@@ -1,0 +1,47 @@
+{{#extends "base"}}
+{{#block "content"}}
+
+<h2 class="mt-4 mb-3">Supplier Order Transactions</h2>
+
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Shop Name</th>
+      <th>Email</th>
+      <th>Order Date</th>
+      <th>Item</th>
+      <th>Quantity</th>
+      <th>Unit Price</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each orders}}
+    <tr>
+      <td>{{this.shop_name}}</td>
+      <td>{{this.shop_email}}</td>
+      <td>{{formatDate this.supply_order_date}}</td>
+      <td>{{this.desc_item}}</td>
+      <td>{{this.quantity}}</td>
+      <td>${{this.unit_price}}</td>
+      <td>
+        <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST">
+          <select name="status" class="form-select form-select-sm">
+            <option value="pending" {{#if (eq this.status "pending")}}selected{{/if}}>Pending</option>
+            <option value="partially_received" {{#if (eq this.status "partially_received")}}selected{{/if}}>Partially Received</option>
+            <option value="completed" {{#if (eq this.status "completed")}}selected{{/if}}>Completed</option>
+            <option value="cancelled" {{#if (eq this.status "cancelled")}}selected{{/if}}>Cancelled</option>
+          </select>
+      </td>
+      <td>
+          <button type="submit" class="btn btn-sm btn-primary">Update</button>
+        </form>
+      </td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+{{/block}}
+{{/extends}}
