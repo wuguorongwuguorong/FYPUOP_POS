@@ -37,24 +37,23 @@
             <th>Total w/ Tax</th>
             <th>Status</th>
             <th>Action</th>
+        </tr>
     </thead>
     <tbody>
         {{#each orders}}
         <tr>
-
             <td>{{this.supplier_name}}</td>
             <td>{{formatDate this.supply_order_date}}</td>
             <td>{{this.desc_item}}</td>
             <td>{{this.quantity}}</td>
             <td>${{this.unit_price}}</td>
             <td>${{multiply this.quantity this.unit_price}}</td>
-            <td> ${{multiply (multiply this.quantity this.unit_price) 0.09}} </td>
-            <td> ${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price)
-                0.09)}} </td>
+            <td>${{multiply (multiply this.quantity this.unit_price) 0.09}}</td>
+            <td>${{add (multiply this.quantity this.unit_price) (multiply (multiply this.quantity this.unit_price)
+                0.09)}}</td>
             <td>
                 <form action="/supplier-orders/item/{{this.order_item_id}}/status" method="POST" class="status-form"
-                    data-order-id="{{this.order_item_id}}" data-order="{{this.supply_order_id}}"
-                    data-supplier="{{this.supplier_name}}" data-desc="{{this.desc_item}}">
+                    data-order-id="{{this.order_item_id}}" data-order="{{this.supply_order_id}}">
                     <input type="hidden" name="redirect"
                         value="/supplier-orders/transaction?sort={{../sortOrder}}&start_date={{../start_date}}&end_date={{../end_date}}">
                     <select name="status" class="form-select form-select-sm me-2">
@@ -76,28 +75,6 @@
     </tbody>
 </table>
 
-{{!--
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.status-form').forEach(form => {
-            form.addEventListener('submit', function (e) {
-                const status = form.querySelector('select[name="status"]').value;
-                const orderItemId = form.getAttribute('data-order-id');
-                const supplyOrderId = form.getAttribute('data-order');
-
-                if (status === 'cancelled') {
-                    e.preventDefault(); // Stop the form submission
-
-                    const modal = new bootstrap.Modal(document.getElementById('cancelReasonModal'));
-                    document.getElementById('cancelReasonForm').action =
-                        `/supplier-orders/item/${orderItemId}/status?order=${supplyOrderId}`;
-                    modal.show();
-                }
-            });
-        });
-    });
-</script> --}}
-
 <!-- Partial Received Modal -->
 <div class="modal fade" id="partialReceivedModal" tabindex="-1" aria-labelledby="partialReceivedLabel"
     aria-hidden="true">
@@ -105,21 +82,16 @@
         <form id="partialReceivedForm" method="POST">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="partialReceivedLabel">Partial Item Received</h5>
+                    <h5 class="modal-title">Quantity Received</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Supplier:</strong> <span id="modalSupplierName"></span></p>
-                    <p><strong>Item:</strong> <span id="modalItemDesc"></span></p>
-                    <div class="form-group">
-                        <label for="received_quantity">Quantity Received</label>
-                        <input type="number" step="0.01" name="received_quantity" id="received_quantity"
-                            class="form-control" required>
-                    </div>
+                    <label for="received_quantity" class="form-label">Enter received quantity</label>
+                    <input type="number" step="0.01" name="received_quantity" class="form-control" required>
                     <input type="hidden" name="status" value="partially_received">
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-warning">Update Quantity</button>
+                    <button type="submit" class="btn btn-warning">Submit</button>
                 </div>
             </div>
         </form>
@@ -127,63 +99,25 @@
 </div>
 
 
-<!-- Cancel Reason Modal -->
-<div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="cancelReasonForm" method="POST">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="cancelModalLabel">Reason for Cancellation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <textarea name="notes" class="form-control" required
-                        placeholder="Enter cancellation reason..."></textarea>
-                    <input type="hidden" name="status" value="cancelled">
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">Submit Cancellation</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-
+<!-- JavaScript to trigger modal -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.status-form').forEach(form => {
             form.addEventListener('submit', function (e) {
                 const status = form.querySelector('select').value;
-                const orderItemId = form.getAttribute('data-order-id');
-                const supplyOrderId = form.getAttribute('data-order');
-                const supplierName = form.getAttribute('data-supplier');
-                const itemDesc = form.getAttribute('data-desc');
-
-                if (status === 'cancelled') {
-                    e.preventDefault();
-                    const modal = new bootstrap.Modal(document.getElementById('cancelReasonModal'));
-                    const cancelForm = document.getElementById('cancelReasonForm');
-                    cancelForm.action = `/supplier-orders/item/${orderItemId}/status?order=${supplyOrderId}`;
-                    modal.show();
-                }
+                const orderItemId = form.dataset.orderId;
 
                 if (status === 'partially_received') {
-                    e.preventDefault();
+                    e.preventDefault(); // Stop original submit
                     const modal = new bootstrap.Modal(document.getElementById('partialReceivedModal'));
-                    const partialForm = document.getElementById('partialReceivedForm');
-                    partialForm.action = `/supplier-orders/item/${orderItemId}/status?order=${supplyOrderId}`;
-                    document.getElementById('modalSupplierName').innerText = supplierName;
-                    document.getElementById('modalItemDesc').innerText = itemDesc;
+                    const modalForm = document.getElementById('partialReceivedForm');
+                    modalForm.action = `/supplier-orders/item/${orderItemId}/status`; // set correct post route
                     modal.show();
                 }
             });
         });
     });
 </script>
-
-
-
 
 
 {{/block}}

@@ -8,9 +8,10 @@
         <tr>
             <th>Supplier</th>
             <th>Order Date</th>
+            <th>Delivery Date</th>
             <th>Item</th>
             <th>Quantity</th>
-            <th>Unit Price</th>
+            {{!-- <th>Unit Price</th> --}}
             <th>Subtotal</th>
             <th>Tax (9%)</th>
             <th>Total w/ Tax</th>
@@ -23,6 +24,7 @@
         <tr>
             <td>{{this.supplier_name}}</td>
             <td>{{formatDate this.supply_order_date}}</td>
+            {{!-- <td>{{formatDate this.supply_updated_at}}</td> --}}
             <td>{{this.desc_item}}</td>
             <td>{{this.quantity}}</td>
             <td>${{this.unit_price}}</td>
@@ -36,6 +38,7 @@
     </tbody>
 </table>
 
+<a href="/supplier-orders/transaction" class="btn btn-secondary mt-3">← Back to Pending Transactions</a>
 
 {{/block}}
 

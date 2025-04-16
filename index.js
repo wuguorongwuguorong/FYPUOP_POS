@@ -533,36 +533,39 @@ async function main() {
       res.status(500).send('Server error');
     }
   });
+  // *****Ordering of supplier items ends here******
 
+
+  //Transaction of orders starts here
   //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
     const sortOrder = req.query.sort === 'asc' ? 'ASC' : 'DESC';
     const { start_date, end_date } = req.query;
 
     let query = `
-    SELECT 
-      so.supply_order_id,
-      so.supply_order_date,
-      su.supplier_name,
-      sh.shop_email,
-      soi.order_item_id,
-      soi.desc_item,
-      soi.quantity,
-      soi.unit_price,
-      soi.status
-    FROM supplier_orders so
-    JOIN shops sh ON so.shop_id = sh.shop_id
-    JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
-    JOIN suppliers su ON so.supplier_id =su.supplier_id
-    WHERE soi.status NOT IN ('completed', 'cancelled')
-
-  `;
+      SELECT 
+        so.supply_order_id,
+        so.supply_order_date,
+        su.supplier_name,
+        sh.shop_email,
+        soi.order_item_id,
+        soi.desc_item,
+        soi.quantity,
+        soi.unit_price,
+        soi.status,
+        soi.received_quantity
+      FROM supplier_orders so
+      JOIN shops sh ON so.shop_id = sh.shop_id
+      JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
+      JOIN suppliers su ON so.supplier_id = su.supplier_id
+      WHERE soi.status NOT IN ('completed', 'cancelled')
+    `;
 
     const params = [];
 
-    // Apply date filter if both dates are provided
+    // 🟨 If dates provided, append using AND
     if (start_date && end_date) {
-      query += ` WHERE DATE(so.supply_order_date) BETWEEN ? AND ?`;
+      query += ` AND DATE(so.supply_order_date) BETWEEN ? AND ?`;
       params.push(start_date, end_date);
     }
 
@@ -570,46 +573,59 @@ async function main() {
 
     try {
       const [orders] = await connection.execute(query, params);
-      res.render('supplier_orders_transaction_all', { orders, sortOrder, start_date, end_date });
+      res.render('supplier_orders_transaction_all', {
+        orders,
+        sortOrder,
+        start_date,
+        end_date
+      });
     } catch (err) {
       console.error("❌ Failed to load supplier order transactions:", err);
       res.status(500).send('Server error');
     }
   });
 
+
   //POST route after selecting individual row from pending to completed
-  app.post('/supplier-orders/item/:order_item_id/status', async (req, res) => {
-    const orderItemId = req.params.order_item_id;
-    const { status, notes } = req.body;
-    const redirectUrl = req.query.order
-      ? `/supplier-orders/transaction`
-      : req.body.redirect || '/supplier-orders/transaction';
+  // app.post('/supplier-orders/item/:id/status', async (req, res) => {
+  //   const itemId = req.params.id;
+  //   const { status, notes, received_quantity } = req.body;
+  //   const redirectUrl = req.query.order ? `/supplier-orders/transaction` : '/'; // fallback redirect
 
-    try {
-      // 1. Update the status in supplier_order_items
-      await connection.execute(
-        `UPDATE supplier_order_items SET status = ? WHERE order_item_id = ?`,
-        [status, orderItemId]
-      );
+  //   try {
+  //     if (status === 'cancelled') {
+  //       // handle cancellation
+  //       await connection.execute(
+  //         `UPDATE supplier_orders 
+  //          JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
+  //          SET supplier_orders.status = ?, supplier_orders.notes = ?
+  //          WHERE soi.order_item_id = ?`,
+  //         [status, notes, itemId]
+  //       );
+  //     } else if (status === 'partially_received') {
+  //       // handle partial received
+  //       await connection.execute(
+  //         `UPDATE supplier_order_items 
+  //          SET status = ?, received_quantity = ? 
+  //          WHERE order_item_id = ?`,
+  //         [status, received_quantity, itemId]
+  //       );
+  //     } else {
+  //       // handle other status updates
+  //       await connection.execute(
+  //         `UPDATE supplier_order_items 
+  //          SET status = ? 
+  //          WHERE order_item_id = ?`,
+  //         [status, itemId]
+  //       );
+  //     }
 
-      // 2. If status is 'cancelled' and note is provided, update the main order table
-      if (status === 'cancelled' && notes) {
-        await connection.execute(
-          `UPDATE supplier_orders 
-           SET status = ?, notes = ?, updated_at = NOW()
-           WHERE supply_order_id = (
-              SELECT supply_order_id FROM supplier_order_items WHERE order_item_id = ?
-           )`,
-          [status, notes, orderItemId]
-        );
-      }
-
-      res.redirect(redirectUrl);
-    } catch (err) {
-      console.error("❌ Failed to update status:", err);
-      res.status(500).send('Server error');
-    }
-  });
+  //     res.redirect(redirectUrl);
+  //   } catch (err) {
+  //     console.error("❌ Failed to update status:", err);
+  //     res.status(500).send("Server error");
+  //   }
+  // });
 
 
   //GET route to show completed transaction
@@ -663,24 +679,48 @@ async function main() {
   });
 
 
-  //POST route for cancellation of item
+  //POST route for cancellation or partial received of item/s
   app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
     const itemId = req.params.itemId;
-    const { status, redirect, notes } = req.body;
+    const { status, redirect, notes, received_quantity } = req.body;
     const supplyOrderId = req.query.order;
-
+  
     try {
-      await connection.execute(
-        `UPDATE supplier_order_items SET status = ? WHERE order_item_id = ?`,
-        [status, itemId]
-      );
-
-      if (status === 'cancelled' && notes) {
+      console.log("🔄 Updating item:", itemId, "| Status:", status, "| Received:", received_quantity);
+  
+      if (status === 'cancelled') {
         await connection.execute(
-          `UPDATE supplier_orders SET notes = ? WHERE supply_order_id = ?`,
-          [notes, supplyOrderId]
+          `UPDATE supplier_orders 
+           JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
+           SET supplier_orders.status = ?, supplier_orders.notes = ?
+           WHERE soi.order_item_id = ?`,
+          [status, notes, itemId]
+        );
+      } else if (status === 'partially_received') {
+        const actualReceived = parseFloat(received_quantity || 0);
+  
+        const [result] = await connection.execute(
+          `UPDATE supplier_order_items 
+           SET 
+             received_quantity = ?, 
+             status = CASE 
+               WHEN ? >= quantity THEN 'completed'
+               ELSE 'partially_received'
+             END
+           WHERE order_item_id = ?`,
+          [actualReceived, actualReceived, itemId]
+        );
+  
+        console.log("✅ Partial update result:", result);
+      } else {
+        await connection.execute(
+          `UPDATE supplier_order_items 
+           SET status = ? 
+           WHERE order_item_id = ?`,
+          [status, itemId]
         );
       }
+      
 
       res.redirect(redirect || '/supplier-orders/transaction');
     } catch (err) {
@@ -689,7 +729,8 @@ async function main() {
     }
   });
 
-
+  
+  
 
 }//end
 
