@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS shops (
     shop_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )engine = innodb;
 
+CREATE TABLE IF NOT EXISTS employees ( 
+    emp_id INT AUTO_INCREMENT PRIMARY KEY, 
+    emp_name VARCHAR(100) NOT NULL, 
+    emp_hp VARCHAR(12) NOT NULL, 
+    emp_title VARCHAR(20) NOT NULL, 
+    emp_status VARCHAR(20) NOT NULL,
+    emp_pin CHAR(60) NOT NULL  
+) ENGINE=InnoDB;
+
+
 CREATE TABLE IF NOT EXISTS suppliers (
     supplier_id INT AUTO_INCREMENT PRIMARY KEY,
     supplier_name VARCHAR(100) NOT NULL,

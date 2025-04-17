@@ -10,6 +10,8 @@ const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const { truncate } = require('fs/promises');
+const bcrypt = require('bcrypt');
+
 
 let app = express();
 app.use(cors());
@@ -192,6 +194,7 @@ async function main() {
     }
   });
 
+// *****ALL Suppliers ONLY starts here*****  
   // GET Suppliers route
   app.get('/suppliers', async (req, res) => {
     try {
@@ -219,7 +222,7 @@ async function main() {
   });
 
 //To toggle the supplier when not in used
-app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
+ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
   const shopSupplierId = req.params.shopSupplierId;
 
   try {
@@ -237,9 +240,8 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
   }
 });
 
-  
-  //Create Supplier Route
-  app.get('/suppliers/create', async (req, res) => {
+//Create Supplier Route
+app.get('/suppliers/create', async (req, res) => {
     try {
 
       const [shops] = await connection.execute("SELECT shop_id FROM shops");
@@ -347,6 +349,10 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
+// *****ALL Suppliers ONLY stops here*****
+
+
+//***** Transaction of ALL Suppliers orders starts here *****
 
   //GET Supplier Ordering
   app.get('/suppliers/:id/ordering', async (req, res) => {
@@ -553,11 +559,7 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
-  // *****Ordering of supplier items ends here******
-
-
-  //Transaction of orders starts here
-
+ 
   //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
     const sortOrder = req.query.sort === 'asc' ? 'ASC' : 'DESC';
@@ -606,7 +608,6 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
-
 
   //POST route after selecting individual row from pending to completed
   // app.post('/supplier-orders/item/:id/status', async (req, res) => {
@@ -701,7 +702,6 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
     }
   });
 
-
   //POST route for cancellation or partial received of item/s
   app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
     const itemId = req.params.itemId;
@@ -751,7 +751,7 @@ app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
-
+ // *****Ordering of supplier items ends here******
   
   
 
