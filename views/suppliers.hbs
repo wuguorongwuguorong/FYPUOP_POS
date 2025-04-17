@@ -12,32 +12,33 @@
 <table class="table table-bordered">
     <thead class="thead-light">
         <tr>
-            <th>Supplier ID</th>
+
             <th>Supplier Name</th>
             <th>Contact Person</th>
             <th>Email</th>
-            <th>Supplier Created</th>
-            <th>Supplier Updated</th>
-            <th>Shop Supplier ID</th>
-            <th>Shop ID</th>
+            <th>Supplier Since</th>
             <th>Is Active</th>
-            <th>Shop Link Created</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {{#each suppliers}}
         <tr>
-            <td>{{this.supplier_id}}</td>
             <td>{{this.supplier_name}}</td>
             <td>{{this.supplier_contact_person}}</td>
             <td>{{this.supplier_email}}</td>
             <td>{{formatDate this.supplier_created_at}}</td>
-            <td>{{formatDate this.supplier_updated_at}}</td>
-            <td>{{this.shop_supplier_id}}</td>
-            <td>{{this.shop_id}}</td>
-            <td>{{this.is_active}}</td>
-            <td>{{formatDate this.shop_link_created_at}}</td>
+
+            <td>
+                <form action="/suppliers/{{this.shop_supplier_id}}/toggle-active" method="POST" style="display:inline;">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" onchange="this.form.submit()"
+                            {{#if this.is_active}}checked{{/if}}>
+                    </div>
+                </form>
+            </td>
+
+
             <td>
                 <a href="/suppliers/{{this.supplier_id}}/update" class="btn btn-primary btn-sm">Edit</a>
                 <a href="/suppliers/{{this.supplier_id}}/delete" class="btn btn-danger btn-sm"

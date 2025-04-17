@@ -218,6 +218,26 @@ async function main() {
     }
   });
 
+//To toggle the supplier when not in used
+app.post('/suppliers/:shopSupplierId/toggle-active', async (req, res) => {
+  const shopSupplierId = req.params.shopSupplierId;
+
+  try {
+    await connection.execute(
+      `UPDATE shop_suppliers 
+       SET is_active = NOT is_active 
+       WHERE shop_supplier_id = ?`,
+      [shopSupplierId]
+    );
+
+    res.redirect('/suppliers');
+  } catch (err) {
+    console.error("❌ Failed to toggle supplier status:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+  
   //Create Supplier Route
   app.get('/suppliers/create', async (req, res) => {
     try {
@@ -537,6 +557,7 @@ async function main() {
 
 
   //Transaction of orders starts here
+
   //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
     const sortOrder = req.query.sort === 'asc' ? 'ASC' : 'DESC';
@@ -551,9 +572,10 @@ async function main() {
         soi.order_item_id,
         soi.desc_item,
         soi.quantity,
+        soi.received_quantity,
         soi.unit_price,
-        soi.status,
-        soi.received_quantity
+        soi.status
+        
       FROM supplier_orders so
       JOIN shops sh ON so.shop_id = sh.shop_id
       JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
@@ -641,7 +663,8 @@ async function main() {
         soi.desc_item,
         soi.quantity,
         soi.unit_price,
-        soi.status
+        soi.status,
+        so.updated_at AS delivery_date
        FROM supplier_orders so
        JOIN shops sh ON so.shop_id = sh.shop_id
        JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
