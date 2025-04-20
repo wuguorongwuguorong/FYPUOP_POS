@@ -1,0 +1,58 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+
+<h2 class="mt-4 mb-3">Edit Employee</h2>
+
+<form action="/employee/{{employee.emp_id}}/edit" method="POST">
+  <div class="mb-3">
+    <label for="emp_name" class="form-label">Full Name</label>
+    <input type="text" name="emp_name" id="emp_name" class="form-control" value="{{employee.emp_name}}" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="emp_hp" class="form-label">Phone Number</label>
+    <input type="text" name="emp_hp" id="emp_hp" class="form-control" value="{{employee.emp_hp}}" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="emp_role_id" class="form-label">Role</label>
+    <select name="emp_role_id" id="emp_role_id" class="form-select" required>
+      <option disabled>-- Select Role --</option>
+      {{#each roles}}
+        <option value="{{this.emp_role_id}}" {{#if (eq this.emp_role_id ../employee.emp_role_id)}}selected{{/if}}>
+          {{this.emp_role}}
+        </option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="hourly_rate" class="form-label">Hourly Rate</label>
+    <input type="number" step="0.01" name="hourly_rate" id="hourly_rate" class="form-control" value="{{employee.hourly_rate}}">
+  </div>
+
+  <div class="mb-3">
+    <label for="monthly_rate" class="form-label">Monthly Rate</label>
+    <input type="number" step="0.01" name="monthly_rate" id="monthly_rate" class="form-control" value="{{employee.monthly_rate}}">
+  </div>
+
+  <div class="mb-3">
+    <label for="shop_id" class="form-label">Shop</label>
+    <select name="shop_id" id="shop_id" class="form-select" required>
+      <option disabled>-- Select Shop --</option>
+      {{#each shops}}
+        <option value="{{this.shop_id}}" {{#if (eq this.shop_id ../employee.shop_id)}}selected{{/if}}>
+          {{this.shop_name}}
+        </option>
+      {{/each}}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Update Employee</button>
+  <a href="/employees_list" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+
+{{/block}}
+
+{{/extends}}

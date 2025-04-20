@@ -840,6 +840,56 @@ async function main() {
     }
   });
 
+//Get route for update
+app.get('/employee/:id/edit', async (req, res) => {
+  const empId = req.params.id;
+
+  try {
+    const [[employee]] = await connection.execute(
+      `SELECT 
+        e.emp_id, e.emp_name, e.emp_hp, e.emp_role_id, e.shop_id,
+        r.hourly_rate, r.monthly_rate
+       FROM employees e
+       JOIN employees_role r ON e.emp_role_id = r.emp_role_id
+       WHERE e.emp_id = ?`, [empId]
+    );
+
+    const [roles] = await connection.execute(`SELECT * FROM employees_role`);
+    const [shops] = await connection.execute(`SELECT * FROM shops`);
+
+    res.render('employees_edit', { employee, roles, shops });
+  } catch (err) {
+    console.error("❌ Failed to load employee for edit:", err);
+    res.status(500).send('Server error');
+  }
+});
+
+//POSt route for employee Updates
+app.post('/employee/:id/edit', async (req, res) => {
+  const empId = req.params.id;
+  const { emp_name, emp_hp, emp_role_id, shop_id, hourly_rate, monthly_rate } = req.body;
+
+  try {
+    await connection.execute(`
+      UPDATE employees 
+      SET emp_name = ?, emp_hp = ?, emp_role_id = ?, shop_id = ? 
+      WHERE emp_id = ?
+    `, [emp_name, emp_hp, emp_role_id, shop_id, empId]);
+
+    await connection.execute(`
+      UPDATE employees_role 
+      SET hourly_rate = ?, monthly_rate = ?
+      WHERE emp_role_id = ?
+    `, [hourly_rate || null, monthly_rate || null, emp_role_id]);
+
+    res.redirect('/employees_list');
+  } catch (err) {
+    console.error("❌ Failed to update employee:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+
 
 }//end
 
