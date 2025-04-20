@@ -1,0 +1,40 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<h2 class="mt-4 mb-3">{{shopName}} - Employees Overview</h2>
+
+
+<a href="/employee_roles" class="btn btn-success mb-3">+ Add New Employee</a>
+
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Role</th>
+      <th>Hourly Rate</th>
+      <th>Monthly Rate</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each employees}}
+    <tr>
+      <td>{{this.emp_name}}</td>
+      <td>{{this.emp_hp}}</td>
+      <td>{{this.emp_role}}</td>
+      <td>{{#if this.hourly_rate}}${{this.hourly_rate}}{{else}}-{{/if}}</td>
+      <td>{{#if this.monthly_rate}}${{this.monthly_rate}}{{else}}-{{/if}}</td>
+      <td>
+        <a href="/employee/{{this.emp_id}}/edit" class="btn btn-sm btn-primary">Edit</a>
+        <a href="/employee/{{this.emp_id}}/delete" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this employee?')">Delete</a>
+      </td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+{{/block}}
+
+{{/extends}}
+

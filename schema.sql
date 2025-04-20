@@ -24,13 +24,22 @@ CREATE TABLE IF NOT EXISTS shops (
     shop_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )engine = innodb;
 
+
+
+CREATE TABLE IF NOT EXISTS employees_role ( 
+    emp_role_id INT AUTO_INCREMENT PRIMARY KEY, 
+    emp_role VARCHAR(100) NOT NULL, 
+    hourly_rate Decimal(10,2) NULL, 
+    monthly_rate Decimal(10,2) NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS employees ( 
     emp_id INT AUTO_INCREMENT PRIMARY KEY, 
     emp_name VARCHAR(100) NOT NULL, 
     emp_hp VARCHAR(12) NOT NULL, 
-    emp_title VARCHAR(20) NOT NULL, 
-    emp_status VARCHAR(20) NOT NULL,
-    emp_pin CHAR(60) NOT NULL  
+    emp_pin CHAR(60) NOT NULL,
+    FOREIGN KEY (emp_role_id) REFERENCES employees_role(emp_role_id) ON DELETE CASCADE  
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE  
 ) ENGINE=InnoDB;
 
 
@@ -229,3 +238,9 @@ ALTER TABLE customer_transactions ADD COLUMN order_id int;
 ALTER TABLE customer_transactions ADD COLUMN customer_id int;
 ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_order_trans FOREIGN KEY(order_id) REFERENCES orders(order_id);
 ALTER TABLE customer_transactions ADD CONSTRAINT fk_cust_trans FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
+
+ALTER TABLE employees ADD COLUMN emp_role_id int;
+ALTER TABLE employees ADD CONSTRAINT fk_employee_role FOREIGN KEY(emp_role_id) REFERENCES employee_role(emp_role_id);
+
+ALTER TABLE employees ADD COLUMN shop_id int;
+ALTER TABLE employees ADD CONSTRAINT fk_shop_employees FOREIGN KEY(shop_id) REFERENCES shops(shop_id);

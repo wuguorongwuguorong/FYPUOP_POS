@@ -1,0 +1,43 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<h2 class="mt-4 mb-3">Add New Employee</h2>
+
+<div class="card">
+  <div class="card-body">
+    <form action="/employees/create" method="POST">
+      <div class="mb-3">
+        <label for="emp_name" class="form-label">Full Name</label>
+        <input type="text" name="emp_name" id="emp_name" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="emp_hp" class="form-label">Phone Number</label>
+        <input type="text" name="emp_hp" id="emp_hp" class="form-control" maxlength="12" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="emp_pin" class="form-label">4-Digit PIN</label>
+        <input type="password" name="emp_pin" id="emp_pin" maxlength="4" class="form-control" required>
+      </div>
+
+
+      <div class="mb-3">
+        <label for="shop_id" class="form-label">Assign to Shop</label>
+        <select name="shop_id" id="shop_id" class="form-select" required>
+          <option value="">-- Select Shop --</option>
+          {{#each shops}}
+            <option value="{{this.shop_id}}">{{this.shop_name}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-success">Create Employee</button>
+    </form>
+  </div>
+</div>
+
+<a href="/employees_list" class="btn btn-secondary mt-3">← Back to Employee List</a>
+{{/block}}
+
+{{/extends}}

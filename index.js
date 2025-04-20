@@ -11,6 +11,7 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const { truncate } = require('fs/promises');
 const bcrypt = require('bcrypt');
+const saltRounds = 10; 
 
 
 let app = express();
@@ -753,7 +754,99 @@ app.get('/suppliers/create', async (req, res) => {
   });
  // *****Ordering of supplier items ends here******
   
-  
+//****** Employees Starts here*****
+// Get route for employees 
+app.get('/employees_list', async (req, res) => {
+  try {
+    const [employees] = await connection.execute(`
+      SELECT 
+        e.emp_id,
+        e.emp_name,
+        e.emp_hp,
+        r.emp_role,
+        r.hourly_rate,
+        r.monthly_rate,
+        s.shop_name
+      FROM employees e
+      JOIN employees_role r ON e.emp_role_id = r.emp_role_id
+      LEFT JOIN shops s ON e.shop_id = s.shop_id
+    `);
+
+    res.render('employees_list', { employees, shopName: employees[0]?.shop_name });
+  } catch (err) {
+    console.error("❌ Failed to fetch roles:", err);
+    res.status(500).send('Server error');
+  }
+});
+
+// GET all employee roles
+app.get('/employee_roles', async (req, res) => {
+  try {
+    const [roles] = await connection.execute(`SELECT * FROM employees_role`);
+    res.render('employee_roles', { roles });
+  } catch (err) {
+    console.error("❌ Failed to load employee roles:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+app.get('/employee_roles', async (req, res) => {
+  try {
+    const [roles] = await connection.execute(`SELECT * FROM employees_role`);
+    res.render('employee_roles', { roles });
+  } catch (err) {
+    console.error("❌ Failed to load employee roles:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+app.post('/employee_roles/create', async (req, res) => {
+  const { emp_role, hourly_rate, monthly_rate } = req.body;
+
+  try {
+    await connection.execute(
+      `INSERT INTO employees_role (emp_role, hourly_rate, monthly_rate) VALUES (?, ?, ?)`,
+      [emp_role, hourly_rate || null, monthly_rate || null]
+    );
+    res.redirect('/employees_list');
+  } catch (err) {
+    console.error("❌ Failed to create role:", err);
+    res.status(500).send('Server error');
+  }
+});
+
+
+//
+app.get('/employees/create', async (req, res) => {
+  try {
+    const [roles] = await connection.execute('SELECT emp_role_id, emp_role FROM employees_role');
+    const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+    res.render('employees_create', { roles, shops });
+  } catch (err) {
+    console.error("❌ Failed to load employee creation form:", err);
+    res.status(500).send("Server error");
+  }
+});
+//POST route for new employee
+app.post('/employees/create', async (req, res) => {
+  const { emp_name, emp_hp, emp_pin, shop_id } = req.body;
+
+  try {
+    const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
+    await connection.execute(`
+      INSERT INTO employees (emp_name, emp_hp, emp_pin, shop_id)
+      VALUES (?, ?, ?, ?)`,
+      [emp_name, emp_hp, hashedPin, shop_id]
+    );
+
+    console.log(hashedPin);
+    res.redirect('/employees_list');
+  } catch (err) {
+    console.error("❌ Failed to create employee:", err);
+    res.status(500).send("Server error");
+  }
+});
+
 
 }//end
 
