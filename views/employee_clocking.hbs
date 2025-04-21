@@ -1,0 +1,28 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+
+<h2 class="mt-4 mb-3">Employee Clock In / Clock Out</h2>
+
+<form action="/employee/clocking" method="POST" class="card p-4 shadow-sm">
+  <div class="mb-3">
+    <label for="emp_id" class="form-label">Select Employee</label>
+    <select name="emp_id" id="emp_id" class="form-select" required>
+      <option value="">-- Choose an Employee --</option>
+      {{#each employees}}
+        <option value="{{this.emp_id}}">{{this.emp_name}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="emp_pin" class="form-label">Enter 4-digit PIN</label>
+    <input type="password" name="emp_pin" id="emp_pin" class="form-control" maxlength="4" required>
+  </div>
+
+  <button type="submit" class="btn btn-primary w-100">Submit</button>
+</form>
+
+{{/block}}
+
+{{/extends}}

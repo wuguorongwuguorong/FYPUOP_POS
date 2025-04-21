@@ -752,9 +752,9 @@ async function main() {
       res.status(500).send('Server error');
     }
   });
-  // *****Ordering of supplier items ends here******
+  // *****Transaction of supplier orders ends here******
 
-  //****** Employees Starts here*****
+  //****** Employees section starts here*****
   // Get route for employees 
   app.get('/employees_list', async (req, res) => {
     try {
@@ -840,57 +840,170 @@ async function main() {
     }
   });
 
-//Get route for update
-app.get('/employee/:id/edit', async (req, res) => {
-  const empId = req.params.id;
+  //Get route for update
+  app.get('/employee/:id/edit', async (req, res) => {
+    const empId = req.params.id;
 
-  try {
-    const [[employee]] = await connection.execute(
-      `SELECT 
+    try {
+      const [[employee]] = await connection.execute(
+        `SELECT 
         e.emp_id, e.emp_name, e.emp_hp, e.emp_role_id, e.shop_id,
         r.hourly_rate, r.monthly_rate
        FROM employees e
        JOIN employees_role r ON e.emp_role_id = r.emp_role_id
        WHERE e.emp_id = ?`, [empId]
-    );
+      );
 
-    const [roles] = await connection.execute(`SELECT * FROM employees_role`);
-    const [shops] = await connection.execute(`SELECT * FROM shops`);
+      const [roles] = await connection.execute(`SELECT * FROM employees_role`);
+      const [shops] = await connection.execute(`SELECT * FROM shops`);
 
-    res.render('employees_edit', { employee, roles, shops });
-  } catch (err) {
-    console.error("❌ Failed to load employee for edit:", err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('employees_edit', { employee, roles, shops });
+    } catch (err) {
+      console.error("❌ Failed to load employee for edit:", err);
+      res.status(500).send('Server error');
+    }
+  });
 
-//POSt route for employee Updates
-app.post('/employee/:id/edit', async (req, res) => {
-  const empId = req.params.id;
-  const { emp_name, emp_hp, emp_role_id, shop_id, hourly_rate, monthly_rate } = req.body;
+  // POST route to update employee
+  app.post('/employee/:id/edit', async (req, res) => {
+    const empId = req.params.id;
+    const {
+      emp_name,
+      emp_hp,
+      emp_role_id,
+      shop_id,
+      hourly_rate,
+      monthly_rate,
+      emp_pin
+    } = req.body;
 
-  try {
-    await connection.execute(`
+    try {
+
+      await connection.execute(`
       UPDATE employees 
       SET emp_name = ?, emp_hp = ?, emp_role_id = ?, shop_id = ? 
       WHERE emp_id = ?
     `, [emp_name, emp_hp, emp_role_id, shop_id, empId]);
 
-    await connection.execute(`
+      await connection.execute(`
       UPDATE employees_role 
       SET hourly_rate = ?, monthly_rate = ?
       WHERE emp_role_id = ?
     `, [hourly_rate || null, monthly_rate || null, emp_role_id]);
 
-    res.redirect('/employees_list');
-  } catch (err) {
-    console.error("❌ Failed to update employee:", err);
-    res.status(500).send("Server error");
-  }
-});
+      if (emp_pin && emp_pin.trim() !== '') {
+        const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
+        await connection.execute(
+          `UPDATE employees SET emp_pin = ? WHERE emp_id = ?`,
+          [hashedPin, empId]
+        );
+      }
+
+      res.redirect('/employees_list');
+    } catch (err) {
+      console.error("❌ Failed to update employee:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+  // Route to render clock-in/out form
+  app.get('/employee/clocking', async (req, res) => {
+    try {
+      const [employees] = await connection.execute(`
+      SELECT emp_id, emp_name FROM employees
+    `);
+      res.render('employee_clocking', { employees });
+    } catch (err) {
+      console.error("❌ Failed to load clocking page:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+  // Route to handle clock in/out logic
+  app.post('/employee/clocking', async (req, res) => {
+    const { emp_id, emp_pin } = req.body;
+
+    try {
+      const [rows] = await connection.execute(`
+      SELECT emp_pin FROM employees WHERE emp_id = ?
+    `, [emp_id]);
+
+      if (!rows.length) {
+        return res.status(400).send("Employee not found");
+      }
+
+      const match = await bcrypt.compare(emp_pin, rows[0].emp_pin);
+      if (!match) {
+        return res.status(401).send("Invalid PIN");
+      }
+
+      const [existing] = await connection.execute(`
+      SELECT * FROM employee_clocking 
+      WHERE emp_id = ? AND status = 'clocked_in' 
+      ORDER BY clock_in_time DESC LIMIT 1
+    `, [emp_id]);
+
+      if (existing.length) {
+        await connection.execute(`
+        UPDATE employee_clocking 
+        SET clock_out_time = NOW(), status = 'clocked_out' 
+        WHERE clocking_id = ?
+      `, [existing[0].clocking_id]);
+      } else {
+
+        await connection.execute(`
+        INSERT INTO employee_clocking (emp_id, clock_in_time, status) 
+        VALUES (?, NOW(), 'clocked_in')
+      `, [emp_id]);
+      }
+
+      res.redirect('/employee/clocking');
+    } catch (err) {
+      console.error("❌ Failed clocking action:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+  // Route to show total hours clocked
+  app.get('/employee/clocking/report', async (req, res) => {
+    const { start_date, end_date } = req.query;
+    const params = [];
+    let whereClause = '';
+
+    if (start_date && end_date) {
+      whereClause = 'WHERE ec.clocking_date BETWEEN ? AND ?';
+      params.push(start_date, end_date);
+    }
+
+    try {
+      const [clockingData] = await connection.execute(
+        `SELECT 
+        e.emp_name,
+        ec.clocking_date,
+        SUM(ec.total_hours) AS total_hours
+      FROM employee_clocking ec
+      JOIN employees e ON ec.emp_id = e.emp_id
+      ${whereClause}
+      GROUP BY e.emp_name, ec.clocking_date
+      ORDER BY ec.clocking_date ASC`,
+        params
+      );
+
+      res.render('employee_clocking_report', {
+        clockingData,
+        start_date,
+        end_date
+      });
+    } catch (err) {
+      console.error("❌ Failed to fetch clocking data:", err);
+      res.status(500).send("Server error");
+    }
+  });
+  //*****EMployees section ends here ******
 
 
 
+  
 }//end
 
 main();

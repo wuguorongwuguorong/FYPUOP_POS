@@ -42,6 +42,23 @@ CREATE TABLE IF NOT EXISTS employees (
     FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE  
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS employee_clocking (
+    clocking_id INT AUTO_INCREMENT PRIMARY KEY,
+ 
+    clock_in_time DATETIME NOT NULL,
+    clock_out_time DATETIME DEFAULT NULL,
+    clocking_date DATE GENERATED ALWAYS AS (DATE(clock_in_time)) STORED,
+    total_hours DECIMAL(5,2) GENERATED ALWAYS AS (
+        CASE 
+            WHEN clock_out_time IS NOT NULL THEN 
+                TIMESTAMPDIFF(MINUTE, clock_in_time, clock_out_time) / 60
+            ELSE NULL
+        END
+    ) STORED,
+    status ENUM('clocked_in', 'clocked_out') DEFAULT 'clocked_in' 
+   
+) ENGINE=InnoDB;
+
 
 CREATE TABLE IF NOT EXISTS suppliers (
     supplier_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -244,3 +261,6 @@ ALTER TABLE employees ADD CONSTRAINT fk_employee_role FOREIGN KEY(emp_role_id) R
 
 ALTER TABLE employees ADD COLUMN shop_id int;
 ALTER TABLE employees ADD CONSTRAINT fk_shop_employees FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+
+ALTER TABLE employee_clocking ADD COLUMN emp_id int;
+ALTER TABLE employee_clocking ADD CONSTRAINT fk_employee_timesheet FOREIGN KEY(emp_id) REFERENCES employees(emp_id);
