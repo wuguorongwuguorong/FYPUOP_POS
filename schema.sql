@@ -79,19 +79,6 @@ CREATE TABLE IF NOT EXISTS shop_suppliers (
 )engine = innodb;
 
 
-CREATE TABLE IF NOT EXISTS inventory_items (
-    inv_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    inv_item_name VARCHAR(100) NOT NULL,
-    inv_item_unit VARCHAR(20) NOT NULL,
-    inv_item_current_quantity DECIMAL(10,2) DEFAULT 0,
-    inv_item_reorder_level DECIMAL(10,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
-)engine = innodb;
-
-
-
 CREATE TABLE IF NOT EXISTS supplier_orders (
     supply_order_id INT AUTO_INCREMENT PRIMARY KEY,
     supply_order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -126,7 +113,16 @@ CREATE TABLE IF NOT EXISTS supplier_order_items(
   CONSTRAINT `fk_supply_suppliers_order_item` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory_items` (`inv_item_id`)
 ) ENGINE=InnoDB DEFAULT 
 
-
+CREATE TABLE IF NOT EXISTS inventory_items (
+    inv_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    inv_item_name VARCHAR(100) NOT NULL,
+    inv_item_unit VARCHAR(20) NOT NULL,
+    inv_item_current_quantity DECIMAL(10,2) DEFAULT 0,
+    inv_item_reorder_level DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
+)engine = innodb;
 
 CREATE TABLE IF NOT EXISTS inventory_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,

@@ -1,0 +1,47 @@
+{{#extends "base"}}
+{{#block "content"}}
+<h2 class="mt-4 mb-3">Inventory Transactions</h2>
+
+<form method="GET" action="/inventory-transactions" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label for="transaction_type" class="form-label">Filter by Type</label>
+    <select name="transaction_type" id="transaction_type" class="form-select">
+      <option value="">All Types</option>
+      <option value="replenish" {{#if (eq selectedType "replenish")}}selected{{/if}}>Replenish</option>
+      <option value="sale" {{#if (eq selectedType "sale")}}selected{{/if}}>Sale</option>
+      <option value="adjustment" {{#if (eq selectedType "adjustment")}}selected{{/if}}>Adjustment</option>
+      <option value="waste" {{#if (eq selectedType "waste")}}selected{{/if}}>Waste</option>
+    </select>
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary w-100">Filter</button>
+  </div>
+</form>
+
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Item</th>
+      <th>Shop</th>
+      <th>Qty Change</th>
+      <th>Type</th>
+      <th>Notes</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each transactions}}
+    <tr>
+      <td>{{this.inv_item_name}}</td>
+      <td>{{this.shop_name}}</td>
+      <td>{{this.qty_change}}</td>
+      <td>{{this.transaction_type}}</td>
+      <td>{{this.notes}}</td>
+      <td>{{formatDate this.created_at}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+{{/block}}
+{{/extends}}
+

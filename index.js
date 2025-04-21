@@ -181,19 +181,156 @@ async function main() {
   });
 
   //view inventory items
+  // View inventory items with shop name
   app.get('/inventory', async function (req, res) {
     try {
-      const [inventory] = await connection.execute(
-        "SELECT * FROM inventory_items"
-      );
+      const [inventory] = await connection.execute(`
+      SELECT 
+        i.*, 
+        s.shop_name 
+      FROM inventory_items i
+      LEFT JOIN shops s ON i.shop_id = s.shop_id
+    `);
+
       res.render('inventory', {
         inventoryList: inventory
       });
     } catch (err) {
-      console.error("Error loading inventory:", err);
+      console.error("❌ Error loading inventory:", err);
       res.status(500).send("Internal Server Error");
     }
   });
+
+  //GET route for updating inventory from replishment
+  // GET route for inventory transactions with filtering
+  app.get('/inventory-transactions', async (req, res) => {
+    const { type } = req.query;
+
+    let query = `
+    SELECT 
+      it.transaction_id,
+      it.qty_change,
+      it.transaction_type,
+      it.notes,
+      it.created_at,
+      ii.inv_item_name,
+      s.shop_name,
+      so.supply_order_id,
+      soi.desc_item
+    FROM inventory_transactions it
+    JOIN inventory_items ii ON it.inv_item_id = ii.inv_item_id
+    LEFT JOIN shops s ON ii.shop_id = s.shop_id
+    LEFT JOIN supplier_order_items soi ON soi.inv_item_id = ii.inv_item_id
+    LEFT JOIN supplier_orders so ON soi.supply_order_id = so.supply_order_id
+  `;
+
+    const params = [];
+    if (type) {
+      query += ' WHERE it.transaction_type = ?';
+      params.push(type);
+    }
+
+    query += ' ORDER BY it.created_at DESC';
+
+    try {
+      const [transactions] = await connection.execute(query, params);
+      res.render('inventory_transactions', { transactions, filterType: type });
+    } catch (err) {
+      console.error("❌ Failed to fetch inventory transactions:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+
+  // POST route to to show the updated inventory
+  app.post('/inventory-transactions/create', async (req, res) => {
+    const { inv_item_id, qty_change, transaction_type, notes } = req.body;
+
+    try {
+      await connection.execute(
+        `INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+       VALUES (?, ?, ?, ?)`,
+        [inv_item_id, qty_change, transaction_type, notes]
+      );
+
+      // Optionally update inventory item quantity if needed
+      if (transaction_type === 'replenish') {
+        await connection.execute(
+          `UPDATE inventory_items SET inv_item_current_quantity = inv_item_current_quantity + ? WHERE inv_item_id = ?`,
+          [qty_change, inv_item_id]
+        );
+      } else if (transaction_type === 'sale' || transaction_type === 'waste') {
+        await connection.execute(
+          `UPDATE inventory_items SET inv_item_current_quantity = inv_item_current_quantity - ? WHERE inv_item_id = ?`,
+          [qty_change, inv_item_id]
+        );
+      }
+
+      res.redirect('/inventory-transactions');
+    } catch (err) {
+      console.error("❌ Failed to create inventory transaction:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+  app.get('/inventory/transactions/update/:invItemId', async (req, res) => {
+    const invItemId = req.params.invItemId;
+
+    try {
+      const [[item]] = await connection.execute(`
+        SELECT inv_item_id, inv_item_name, inv_item_current_quantity 
+        FROM inventory_items 
+        WHERE inv_item_id = ?`, [invItemId]);
+
+      const [completedOrders] = await connection.execute(`
+        SELECT soi.order_item_id, soi.desc_item, soi.quantity, soi.unit_price, so.supply_order_date
+        FROM supplier_order_items soi
+        JOIN supplier_orders so ON soi.supply_order_id = so.supply_order_id
+        WHERE soi.status = 'completed' 
+        ORDER BY so.supply_order_date DESC
+      `, [invItemId]);
+
+      res.render('inventory_transaction_update', { item, completedOrders });
+    } catch (err) {
+      console.error("❌ Failed to load inventory transaction update:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  app.post('/inventory/transactions/apply', async (req, res) => {
+    const { inv_item_id, selected_order } = req.body;
+
+    try {
+      const [order_item_id, quantityStr] = selected_order.split('|');
+      const quantity = parseFloat(quantityStr);
+
+      if (!order_item_id || isNaN(quantity)) {
+        throw new Error('Invalid order or quantity');
+      }
+
+      // Update inventory item quantity
+      await connection.execute(`
+        UPDATE inventory_items 
+        SET inv_item_current_quantity = inv_item_current_quantity + ?
+        WHERE inv_item_id = ?
+      `, [quantity, inv_item_id]);
+
+      // Insert into inventory_transactions
+      await connection.execute(`
+        INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+        VALUES (?, ?, 'replenish', ?)
+      `, [inv_item_id, quantity, `Updated from completed supplier order item ID: ${order_item_id}`]);
+
+      res.redirect('/inventory');
+    } catch (err) {
+      console.error("❌ Failed to apply inventory transaction:", err);
+      res.status(500).send("Server error");
+    }
+  });
+
+
+
+
 
   // *****ALL Suppliers ONLY starts here*****  
   // GET Suppliers route
@@ -704,6 +841,54 @@ async function main() {
   });
 
   //POST route for cancellation or partial received of item/s
+  // app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
+  //   const itemId = req.params.itemId;
+  //   const { status, redirect, notes, received_quantity } = req.body;
+  //   const supplyOrderId = req.query.order;
+
+  //   try {
+  //     console.log("🔄 Updating item:", itemId, "| Status:", status, "| Received:", received_quantity);
+
+  //     if (status === 'cancelled') {
+  //       await connection.execute(
+  //         `UPDATE supplier_orders 
+  //          JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
+  //          SET supplier_orders.status = ?, supplier_orders.notes = ?
+  //          WHERE soi.order_item_id = ?`,
+  //         [status, notes, itemId]
+  //       );
+  //     } else if (status === 'partially_received') {
+  //       const actualReceived = parseFloat(received_quantity || 0);
+
+  //       const [result] = await connection.execute(
+  //         `UPDATE supplier_order_items 
+  //          SET 
+  //            received_quantity = ?, 
+  //            status = CASE 
+  //              WHEN ? >= quantity THEN 'completed'
+  //              ELSE 'partially_received'
+  //            END
+  //          WHERE order_item_id = ?`,
+  //         [actualReceived, actualReceived, itemId]
+  //       );
+
+  //       console.log("✅ Partial update result:", result);
+  //     } else {
+  //       await connection.execute(
+  //         `UPDATE supplier_order_items 
+  //          SET status = ? 
+  //          WHERE order_item_id = ?`,
+  //         [status, itemId]
+  //       );
+  //     }
+  //   res.redirect(redirect || '/supplier-orders/transaction');
+  // } catch (err) {
+  //   console.error("❌ Failed to update status or note:", err);
+  //   res.status(500).send('Server error');
+  // }
+  // });
+
+  // ✅ Updated POST route for /supplier-orders/item/:itemId/status
   app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
     const itemId = req.params.itemId;
     const { status, redirect, notes, received_quantity } = req.body;
@@ -715,36 +900,71 @@ async function main() {
       if (status === 'cancelled') {
         await connection.execute(
           `UPDATE supplier_orders 
-           JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
-           SET supplier_orders.status = ?, supplier_orders.notes = ?
-           WHERE soi.order_item_id = ?`,
+         JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
+         SET supplier_orders.status = ?, supplier_orders.notes = ?
+         WHERE soi.order_item_id = ?`,
           [status, notes, itemId]
         );
       } else if (status === 'partially_received') {
         const actualReceived = parseFloat(received_quantity || 0);
 
-        const [result] = await connection.execute(
+        const [rows] = await connection.execute(
+          `SELECT quantity FROM supplier_order_items WHERE order_item_id = ?`,
+          [itemId]
+        );
+        const originalQuantity = rows[0]?.quantity || 0;
+
+        const newStatus = actualReceived >= originalQuantity ? 'completed' : 'partially_received';
+
+        await connection.execute(
           `UPDATE supplier_order_items 
-           SET 
-             received_quantity = ?, 
+         SET received_quantity = ?, 
              status = CASE 
                WHEN ? >= quantity THEN 'completed'
                ELSE 'partially_received'
              END
-           WHERE order_item_id = ?`,
+         WHERE order_item_id = ?`,
           [actualReceived, actualReceived, itemId]
         );
 
-        console.log("✅ Partial update result:", result);
+        if (newStatus === 'completed') {
+          // ✅ Fetch inv_item_id
+          const [[itemData]] = await connection.execute(`
+          SELECT inv_item_id, received_quantity 
+          FROM supplier_order_items 
+          WHERE order_item_id = ?`,
+            [itemId]
+          );
+
+          const invItemId = itemData?.inv_item_id;
+          const qtyReceived = itemData?.received_quantity;
+
+          if (invItemId && qtyReceived) {
+            // ✅ Update inventory
+            await connection.execute(`
+            UPDATE inventory_items 
+            SET inv_item_current_quantity = inv_item_current_quantity + ? 
+            WHERE inv_item_id = ?`,
+              [qtyReceived, invItemId]
+            );
+
+            // ✅ Insert inventory transaction log
+            await connection.execute(`
+            INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+            VALUES (?, ?, 'replenish', ?)`,
+              [invItemId, qtyReceived, `Replenished from supplier order item ID: ${itemId}`]
+            );
+          }
+        }
+
       } else {
         await connection.execute(
           `UPDATE supplier_order_items 
-           SET status = ? 
-           WHERE order_item_id = ?`,
+         SET status = ? 
+         WHERE order_item_id = ?`,
           [status, itemId]
         );
       }
-
 
       res.redirect(redirect || '/supplier-orders/transaction');
     } catch (err) {
@@ -753,6 +973,13 @@ async function main() {
     }
   });
   // *****Transaction of supplier orders ends here******
+
+
+  //***** Receipe starts here ******/
+  //GET receipe route
+
+
+
 
   //****** Employees section starts here*****
   // Get route for employees 
@@ -1003,7 +1230,7 @@ async function main() {
 
 
 
-  
+
 }//end
 
 main();
