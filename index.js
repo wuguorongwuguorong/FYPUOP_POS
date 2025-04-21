@@ -208,7 +208,7 @@ async function main() {
 
     let query = `
     SELECT 
-      it.transaction_id,
+      it.inv_trans_id,
       it.qty_change,
       it.transaction_type,
       it.notes,
