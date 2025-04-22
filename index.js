@@ -491,7 +491,6 @@ async function main() {
 
 
   //***** Transaction of ALL Suppliers orders starts here *****
-
   //GET Supplier Ordering
   app.get('/suppliers/:id/ordering', async (req, res) => {
     const supplierId = req.params.id;
@@ -888,7 +887,7 @@ async function main() {
   // }
   // });
 
-  // ✅ Updated POST route for /supplier-orders/item/:itemId/status
+  // POST route for /supplier-orders/item/:itemId/status
   app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
     const itemId = req.params.itemId;
     const { status, redirect, notes, received_quantity } = req.body;
@@ -977,6 +976,54 @@ async function main() {
 
   //***** Receipe starts here ******/
   //GET receipe route
+// GET route to display recipe creation form and list
+// GET route to display recipe creation form and list
+app.get('/recipes', async (req, res) => {
+  try {
+    const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+    const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+    const [recipes] = await connection.execute(`
+      SELECT r.*, i.inv_item_name, m.menu_item_name
+      FROM recipes r
+      LEFT JOIN inventory_items i ON r.inv_item_id = i.inv_item_id
+      LEFT JOIN menu_items m ON r.menu_item_id = m.menu_item_id
+      ORDER BY r.created_at DESC
+    `);
+
+    res.render('recipes', { inventoryItems, menuItems, recipes });
+  } catch (err) {
+    console.error('❌ Failed to load recipes:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+// POST route to create new recipe entries (with multiple ingredients)
+app.post('/recipes/create', async (req, res) => {
+  const { rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id } = req.body;
+
+  try {
+    if (Array.isArray(ingredients)) {
+      for (let i = 0; i < ingredients.length; i++) {
+        await connection.execute(
+          `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [rec_desc, ingredients[i], quantity[i], rec_ing_uom[i], inv_item_id, menu_item_id]
+        );
+      }
+    } else {
+      await connection.execute(
+        `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
+      );
+    }
+
+    res.redirect('/recipes');
+  } catch (err) {
+    console.error('❌ Failed to create recipe:', err);
+    res.status(500).send('Server error');
+  }
+});
 
 
 

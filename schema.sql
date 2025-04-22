@@ -150,20 +150,14 @@ CREATE TABLE IF NOT EXISTS  menu_items (
 
 CREATE TABLE IF NOT EXISTS recipes (
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    rec_desc VARCHAR(255) 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
 )engine = innodb;
 
     
-CREATE TABLE IF NOT EXISTS recipes_ing (
-    rec_ing_id INT AUTO_INCREMENT PRIMARY KEY,
-    desc_text VARCHAR(255),
-    quantity DECIMAL(10,2) NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (recipe_id) REFERENCES recipes(recipe_id) ON DELETE CASCADE 
-)engine = innodb;  
-
 
 CREATE TABLE IF NOT EXISTS order_cart (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
