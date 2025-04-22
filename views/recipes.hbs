@@ -1,106 +1,89 @@
 {{#extends "base"}}
 
 {{#block "content"}}
-<h2 class="mt-4 mb-3">Recipe Management</h2>
+<h2 class="mt-4 mb-4">📋 Recipes Management</h2>
 
-<form action="/recipes/create" method="POST">
-  <div class="mb-3">
-    <label for="menu_item_id" class="form-label">Menu Item</label>
-    <select name="menu_item_id" id="menu_item_id" class="form-select" required>
-      <option value="">-- Select Menu Item --</option>
-      {{#each menuItems}}
-      <option value="{{this.menu_item_id}}">{{this.menu_item_name}}</option>
-      {{/each}}
-    </select>
-  </div>
+<!-- Recipe Creation Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form action="/recipes/create" method="POST" class="row g-3">
+            <div class="col-md-4">
+                <label for="ingredients" class="form-label">Ingredients</label>
+                <input type="text" class="form-control" id="ingredients" name="ingredients" required>
+            </div>
 
-  <div id="ingredient-section">
-    <div class="row mb-2 ingredient-group">
-      <div class="col-md-3">
-        <input type="text" name="ingredients" class="form-control" placeholder="Ingredient" required>
-      </div>
-      <div class="col-md-2">
-        <input type="number" name="quantity" step="0.01" class="form-control" placeholder="Quantity" required>
-      </div>
-      <div class="col-md-2">
-        <input type="text" name="rec_ing_uom" class="form-control" placeholder="UOM (e.g. grams)" required>
-      </div>
-      <div class="col-md-3">
-        <select name="inv_item_id" class="form-select" required>
-          <option value="">-- Inventory Item --</option>
-          {{#each inventoryItems}}
-          <option value="{{this.inv_item_id}}">{{this.inv_item_name}}</option>
-          {{/each}}
-        </select>
-      </div>
-      <div class="col-md-2">
-        <button type="button" class="btn btn-danger remove-ingredient">Remove</button>
-      </div>
+            <div class="col-md-2">
+                <label for="quantity" class="form-label">Quantity</label>
+                <input type="number" step="0.01" class="form-control" id="quantity" name="quantity" required>
+            </div>
+
+            <div class="col-md-2">
+                <label for="rec_ing_uom" class="form-label">Unit</label>
+                <input type="text" class="form-control" id="rec_ing_uom" name="rec_ing_uom" value="grams" required>
+            </div>
+
+            <div class="col-md-4">
+                <label for="inv_item_id" class="form-label">Inventory Item</label>
+                <select class="form-select" id="inv_item_id" name="inv_item_id" required>
+                    <option value="" disabled selected>-- Select Inventory Item --</option>
+                    {{#each inventoryItems}}
+                    <option value="{{this.inv_item_id}}">{{this.inv_item_name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label for="menu_item_id" class="form-label">Menu Item</label>
+                <select class="form-select" id="menu_item_id" name="menu_item_id" required>
+                    <option value="" disabled selected>-- Select Menu Item --</option>
+                    {{#each menuItems}}
+                    <option value="{{this.menu_item_id}}">{{this.menu_item_name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="col-md-12">
+                <label for="rec_desc" class="form-label">Recipe Instructions / Steps</label>
+                <textarea class="form-control" id="rec_desc" name="rec_desc" rows="4" required
+                    placeholder="Write preparation steps here..."></textarea>
+            </div>
+
+            <div class="col-md-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-success">➕ Add Recipe</button>
+            </div>
+        </form>
     </div>
-  </div>
+</div>
 
-  <div class="mb-3">
-    <button type="button" id="add-ingredient" class="btn btn-secondary">+ Add Ingredient</button>
-  </div>
-
-  <div class="mb-3">
-    <label for="rec_desc" class="form-label">Recipe Instructions</label>
-    <textarea name="rec_desc" id="rec_desc" class="form-control" rows="4" placeholder="Write the steps here..." required></textarea>
-  </div>
-
-  <button type="submit" class="btn btn-success">Create Recipe</button>
-</form>
-
-<hr class="my-5">
-
-<h3 class="mb-3">All Recipes</h3>
+<!-- Recipes Table -->
 <table class="table table-bordered">
-  <thead class="table-light">
-    <tr>
-      <th>Menu Item</th>
-      <th>Ingredient</th>
-      <th>Qty</th>
-      <th>UOM</th>
-      <th>Inventory Item</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each recipes}}
-    <tr>
-      <td>{{this.menu_item_name}}</td>
-      <td>{{this.ingredients}}</td>
-      <td>{{this.quantity}}</td>
-      <td>{{this.rec_ing_uom}}</td>
-      <td>{{this.inv_item_name}}</td>
-      <td>{{this.rec_desc}}</td>
-    </tr>
-    {{/each}}
-  </tbody>
+    <thead class="table-light">
+        <tr>
+            <th>Ingredients</th>
+            <th>Quantity</th>
+            <th>Unit</th>
+            <th>Inventory Item</th>
+            <th>Menu Item</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Recipe Steps</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each recipes}}
+        <tr>
+            <td>{{this.ingredients}}</td>
+            <td>{{this.quantity}}</td>
+            <td>{{this.rec_ing_uom}}</td>
+            <td>{{this.inv_item_name}}</td>
+            <td>{{this.menu_item_name}}</td>
+            <td>{{formatDate this.created_at}}</td>
+            <td>{{formatDate this.updated_at}}</td>
+            <td style="white-space: pre-wrap;">{{this.rec_desc}}</td>
+        </tr>
+        {{/each}}
+    </tbody>
 </table>
-
-<script>
-  document.getElementById('add-ingredient').addEventListener('click', () => {
-    const section = document.getElementById('ingredient-section');
-    const first = section.querySelector('.ingredient-group');
-    const clone = first.cloneNode(true);
-
-    clone.querySelectorAll('input, select').forEach(input => {
-      input.value = '';
-    });
-
-    section.appendChild(clone);
-  });
-
-  document.addEventListener('click', function (e) {
-    if (e.target.classList.contains('remove-ingredient')) {
-      const rows = document.querySelectorAll('.ingredient-group');
-      if (rows.length > 1) {
-        e.target.closest('.ingredient-group').remove();
-      }
-    }
-  });
-</script>
 
 {{/block}}
 {{/extends}}
