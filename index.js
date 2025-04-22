@@ -201,8 +201,45 @@ async function main() {
     }
   });
 
+//GET route for create
+app.get('/inventory/create', async (req, res) => {
+  try {
+    const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+    res.render('inventory_create', { shops });
+  } catch (err) {
+    console.error("❌ Failed to load inventory creation form:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+//POST route for inventory create
+app.post('/inventory/create', async (req, res) => {
+  const {
+    inv_item_name,
+    inv_item_unit,
+    inv_item_current_quantity,
+    inv_item_reorder_level,
+    shop_id
+  } = req.body;
+
+  try {
+    await connection.execute(`
+      INSERT INTO inventory_items 
+        (inv_item_name, inv_item_unit, inv_item_current_quantity, inv_item_reorder_level, shop_id)
+      VALUES (?, ?, ?, ?, ?)
+    `, [inv_item_name, inv_item_unit, inv_item_current_quantity, inv_item_reorder_level, shop_id]);
+
+    res.redirect('/inventory');
+  } catch (err) {
+    console.error("❌ Failed to create inventory item:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+
+
+
   //GET route for updating inventory from replishment
-  // GET route for inventory transactions with filtering
   app.get('/inventory-transactions', async (req, res) => {
     const { type } = req.query;
 

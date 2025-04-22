@@ -1,0 +1,44 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<h2 class="mt-4 mb-3">Add New Inventory Item</h2>
+
+<form action="/inventory/create" method="POST" class="card p-4 shadow-sm">
+  <div class="mb-3">
+    <label for="inv_item_name" class="form-label">Item Name</label>
+    <input type="text" name="inv_item_name" id="inv_item_name" class="form-control" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="inv_item_unit" class="form-label">Unit</label>
+    <input type="text" name="inv_item_unit" id="inv_item_unit" class="form-control" placeholder="e.g. kg, pack, pcs" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="inv_item_current_quantity" class="form-label">Current Quantity</label>
+    <input type="number" name="inv_item_current_quantity" id="inv_item_current_quantity" step="0.01" class="form-control" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="inv_item_reorder_level" class="form-label">Reorder Level</label>
+    <input type="number" name="inv_item_reorder_level" id="inv_item_reorder_level" step="0.01" class="form-control" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="shop_id" class="form-label">Shop</label>
+    <select name="shop_id" id="shop_id" class="form-select" required>
+      <option value="" disabled selected>-- Select Shop --</option>
+      {{#each shops}}
+        <option value="{{this.shop_id}}">{{this.shop_name}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-success">Create Item</button>
+  <br>
+  <a href="/inventory" class="btn btn-secondary">Cancel</a>
+</form>
+
+{{/block}}
+
+{{/extends}}
