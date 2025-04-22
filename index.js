@@ -180,7 +180,7 @@ async function main() {
     }
   });
 
-  //view inventory items
+  
   // View inventory items with shop name
   app.get('/inventory', async function (req, res) {
     try {
@@ -201,43 +201,40 @@ async function main() {
     }
   });
 
-//GET route for create
-app.get('/inventory/create', async (req, res) => {
-  try {
-    const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
-    res.render('inventory_create', { shops });
-  } catch (err) {
-    console.error("❌ Failed to load inventory creation form:", err);
-    res.status(500).send("Server error");
-  }
-});
+  //GET route for create
+  app.get('/inventory/create', async (req, res) => {
+    try {
+      const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+      res.render('inventory_create', { shops });
+    } catch (err) {
+      console.error("❌ Failed to load inventory creation form:", err);
+      res.status(500).send("Server error");
+    }
+  });
 
-//POST route for inventory create
-app.post('/inventory/create', async (req, res) => {
-  const {
-    inv_item_name,
-    inv_item_unit,
-    inv_item_current_quantity,
-    inv_item_reorder_level,
-    shop_id
-  } = req.body;
+  //POST route for inventory create
+  app.post('/inventory/create', async (req, res) => {
+    const {
+      inv_item_name,
+      inv_item_unit,
+      inv_item_current_quantity,
+      inv_item_reorder_level,
+      shop_id
+    } = req.body;
 
-  try {
-    await connection.execute(`
+    try {
+      await connection.execute(`
       INSERT INTO inventory_items 
         (inv_item_name, inv_item_unit, inv_item_current_quantity, inv_item_reorder_level, shop_id)
       VALUES (?, ?, ?, ?, ?)
     `, [inv_item_name, inv_item_unit, inv_item_current_quantity, inv_item_reorder_level, shop_id]);
 
-    res.redirect('/inventory');
-  } catch (err) {
-    console.error("❌ Failed to create inventory item:", err);
-    res.status(500).send("Server error");
-  }
-});
-
-
-
+      res.redirect('/inventory');
+    } catch (err) {
+      console.error("❌ Failed to create inventory item:", err);
+      res.status(500).send("Server error");
+    }
+  });
 
   //GET route for updating inventory from replishment
   app.get('/inventory-transactions', async (req, res) => {
@@ -277,7 +274,6 @@ app.post('/inventory/create', async (req, res) => {
       res.status(500).send("Server error");
     }
   });
-
 
   // POST route to to show the updated inventory
   app.post('/inventory-transactions/create', async (req, res) => {
@@ -364,8 +360,7 @@ app.post('/inventory/create', async (req, res) => {
       res.status(500).send("Server error");
     }
   });
-
-
+  //***** All inventory ends here*****/
 
 
 
@@ -1013,13 +1008,13 @@ app.post('/inventory/create', async (req, res) => {
 
   //***** Receipe starts here ******/
   //GET receipe route
-// GET route to display recipe creation form and list
-// GET route to display recipe creation form and list
-app.get('/recipes', async (req, res) => {
-  try {
-    const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
-    const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
-    const [recipes] = await connection.execute(`
+  // GET route to display recipe creation form and list
+  // GET route to display recipe creation form and list
+  app.get('/recipes', async (req, res) => {
+    try {
+      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+      const [recipes] = await connection.execute(`
       SELECT r.*, i.inv_item_name, m.menu_item_name
       FROM recipes r
       LEFT JOIN inventory_items i ON r.inv_item_id = i.inv_item_id
@@ -1027,40 +1022,40 @@ app.get('/recipes', async (req, res) => {
       ORDER BY r.created_at DESC
     `);
 
-    res.render('recipes', { inventoryItems, menuItems, recipes });
-  } catch (err) {
-    console.error('❌ Failed to load recipes:', err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('recipes', { inventoryItems, menuItems, recipes });
+    } catch (err) {
+      console.error('❌ Failed to load recipes:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
-// POST route to create new recipe entries (with multiple ingredients)
-app.post('/recipes/create', async (req, res) => {
-  const { rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id } = req.body;
+  // POST route to create new recipe entries (with multiple ingredients)
+  app.post('/recipes/create', async (req, res) => {
+    const { rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id } = req.body;
 
-  try {
-    if (Array.isArray(ingredients)) {
-      for (let i = 0; i < ingredients.length; i++) {
+    try {
+      if (Array.isArray(ingredients)) {
+        for (let i = 0; i < ingredients.length; i++) {
+          await connection.execute(
+            `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            [rec_desc, ingredients[i], quantity[i], rec_ing_uom[i], inv_item_id, menu_item_id]
+          );
+        }
+      } else {
         await connection.execute(
           `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [rec_desc, ingredients[i], quantity[i], rec_ing_uom[i], inv_item_id, menu_item_id]
+         VALUES (?, ?, ?, ?, ?, ?)`,
+          [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
         );
       }
-    } else {
-      await connection.execute(
-        `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
-      );
-    }
 
-    res.redirect('/recipes');
-  } catch (err) {
-    console.error('❌ Failed to create recipe:', err);
-    res.status(500).send('Server error');
-  }
-});
+      res.redirect('/recipes');
+    } catch (err) {
+      console.error('❌ Failed to create recipe:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
 
 

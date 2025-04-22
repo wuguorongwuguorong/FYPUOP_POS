@@ -20,10 +20,8 @@
             <th>ID</th>
             <th>Item Name</th>
             <th>Price</th>
-            <th>Is Active</th>
+            <th>In Store</th>
             <th>Image</th>
-            <th>Shop ID</th>
-            <th>Created</th>
             <th>Updated</th>
             <th>Actions</th>
         </tr>
@@ -34,12 +32,18 @@
             <td>{{this.menu_item_id}}</td>
             <td>{{this.menu_item_name}}</td>
             <td>${{this.menu_item_price}}</td>
-            <td>{{#if this.is_active}}Yes{{else}}No{{/if}}</td>
+            <td>
+                <form action="/menu/{{this.menu_item_id}}/toggle-active" method="POST" style="display:inline;">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" onchange="this.form.submit()"
+                            {{#if this.is_active}}checked{{/if}}>
+                    </div>
+                </form>
+            </td>
             <td>
                 <img src="{{this.image_url}}" alt="{{this.menu_item_name}}" style="width: 100px; height: auto;">
             </td>
-            <td>{{this.shop_id}}</td>
-            <td>{{formatDate this.created_at}}</td>
+
             <td>{{formatDate this.updated_at}}</td>
             <td>
                 <a href="/menu/{{this.menu_item_id}}/update" class="btn btn-primary btn-sm">Edit</a>
