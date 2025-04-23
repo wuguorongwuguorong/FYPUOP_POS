@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
 )engine = innodb;
 
 
-CREATE TABLE IF NOT EXISTS supplier_order_items(
+CREATE TABLE IF NOT EXISTS supplier_order_transaction(
   order_item_id int NOT NULL AUTO_INCREMENT,
   SKU_num varchar(16) DEFAULT NULL,
   desc_item varchar(100) NOT NULL,
@@ -107,10 +107,9 @@ CREATE TABLE IF NOT EXISTS supplier_order_items(
   supplier_id int DEFAULT NULL,
   unit_of_measurement varchar(20) DEFAULT 'unit',
   PRIMARY KEY (`order_item_id`),
-  KEY `fk_supply_suppliers_order_item` (`inv_item_id`),
-  KEY `fk_supplier_item` (`supplier_id`),
-  CONSTRAINT `fk_supplier_item` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`supplier_id`),
-  CONSTRAINT `fk_supply_suppliers_order_item` FOREIGN KEY (`inv_item_id`) REFERENCES `inventory_items` (`inv_item_id`)
+  KEY `fk_supplier_ordering_transaction` (`supply_order_id`),
+  CONSTRAINT `fk_supplier_ordering_transaction` FOREIGN KEY (`supply_order_id`) REFERENCES `supplier_orders` (`supply_order_id`)
+  
 ) ENGINE=InnoDB DEFAULT 
 
 CREATE TABLE IF NOT EXISTS inventory_items (
@@ -217,8 +216,8 @@ ALTER TABLE supplier_orders ADD CONSTRAINT fk_supply_suppliers_order FOREIGN KEY
 ALTER TABLE supplier_orders ADD CONSTRAINT fk_suppliers_order_transactions FOREIGN KEY(order_item_id) REFERENCES supplier_order_items(order_item_id);
 
 
-ALTER TABLE supplier_order_items ADD COLUMN supplier_id int;
-ALTER TABLE supplier_order_items ADD CONSTRAINT fk_supplier_item FOREIGN KEY(supplier_id) REFERENCES suppliers(supplier_id);
+ALTER TABLE supplier_orders_transaction ADD COLUMN supply_order_id int;
+ALTER TABLE supplier_orders_transaction ADD CONSTRAINT fk_supplier_ordering_transaction FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supplier_order_id);
 
 ALTER TABLE inventory_transactions ADD COLUMN inv_item_id int;
 ALTER TABLE inventory_transactions ADD CONSTRAINT fk_inventory_order_item_transactions FOREIGN KEY(inv_item_id) REFERENCES inventory_items(inv_item_id);
