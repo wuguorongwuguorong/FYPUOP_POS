@@ -180,7 +180,7 @@ async function main() {
     }
   });
 
-  
+
   // View inventory items with shop name
   app.get('/inventory', async function (req, res) {
     try {
@@ -1029,26 +1029,30 @@ async function main() {
     }
   });
 
-  // POST route to create new recipe entries (with multiple ingredients)
+  // GET route for new recipe
+app.get('/recipes/create', async (req, res) => {
+  try {
+    const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+    const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+
+    res.render('recipes_create', { inventoryItems, menuItems });
+  } catch (err) {
+    console.error('❌ Failed to load recipe creation form:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+  // POST route for new recipe
   app.post('/recipes/create', async (req, res) => {
     const { rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id } = req.body;
 
     try {
-      if (Array.isArray(ingredients)) {
-        for (let i = 0; i < ingredients.length; i++) {
-          await connection.execute(
-            `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-            [rec_desc, ingredients[i], quantity[i], rec_ing_uom[i], inv_item_id, menu_item_id]
-          );
-        }
-      } else {
-        await connection.execute(
-          `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
+
+      await connection.execute(
+        `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
          VALUES (?, ?, ?, ?, ?, ?)`,
-          [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
-        );
-      }
+        [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
+      );
 
       res.redirect('/recipes');
     } catch (err) {
@@ -1057,6 +1061,49 @@ async function main() {
     }
   });
 
+  // GET route to show recipe edit form
+  app.get('/recipes/:id/update', async (req, res) => {
+    const recipeId = req.params.id;
+
+    try {
+      const [[recipe]] = await connection.execute(
+        `SELECT * FROM recipes WHERE recipe_id = ?`,
+        [recipeId]
+      );
+
+      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+
+      res.render('recipes_edit', { recipe, inventoryItems, menuItems });
+    } catch (err) {
+      console.error('❌ Failed to load recipe for edit:', err);
+      res.status(500).send('Server error');
+    }
+  });
+
+  // POST route to update recipe
+  app.post('/recipes/:id/update', async (req, res) => {
+    const recipeId = req.params.id;
+    const { rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id } = req.body;
+
+    // const parsedQuantity = parseFloat(quantity);
+    // const parsedInvId = parseInt(inv_item_id, 10);
+    // const parsedMenuId = parseInt(menu_item_id, 10);
+
+    try {
+      await connection.execute(
+        `UPDATE recipes 
+       SET rec_desc = ?, ingredients = ?, quantity = ?, rec_ing_uom = ?, inv_item_id = ?, menu_item_id = ?
+       WHERE recipe_id = ?`,
+        [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id, recipeId]
+      );
+
+      res.redirect('/recipes');
+    } catch (err) {
+      console.error('❌ Failed to update recipe:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
 
 

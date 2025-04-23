@@ -150,9 +150,12 @@ CREATE TABLE IF NOT EXISTS  menu_items (
 
 CREATE TABLE IF NOT EXISTS recipes (
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
-    rec_desc VARCHAR(255) 
+    rec_desc VARCHAR(255),
+    ingredients VARCHAR(255) NOT NULL,
+    quantity DECIMAL (10,2) NOT NULL,
+    rec_ing_uom VARCHAR(20) DEFAULT 'grams',
+    updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
     FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_item_id) REFERENCES inventory_items(inv_item_id) ON DELETE CASCADE
 )engine = innodb;
