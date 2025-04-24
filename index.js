@@ -523,11 +523,11 @@ async function main() {
 
   //***** Transaction of ALL Suppliers orders starts here *****
   //GET Supplier Ordering
-app.get('/suppliers/:id/ordering', async (req, res) => {
-  const supplierId = req.params.id;
+  app.get('/suppliers/:id/ordering', async (req, res) => {
+    const supplierId = req.params.id;
 
-  try {
-    const [supplierRows] = await connection.execute(`
+    try {
+      const [supplierRows] = await connection.execute(`
       SELECT 
         s.supplier_id,
         s.supplier_name,
@@ -542,129 +542,128 @@ app.get('/suppliers/:id/ordering', async (req, res) => {
       WHERE s.supplier_id = ?
     `, [supplierId]);
 
-    if (!supplierRows.length) {
-      return res.status(404).send('Supplier not found');
+      if (!supplierRows.length) {
+        return res.status(404).send('Supplier not found');
+      }
+
+      const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+      const supplier = supplierRows[0];
+      res.render('supplier_place_order', { supplier, shops });
+    } catch (err) {
+      console.error("❌ Error loading supplier order form:", err);
+      res.status(500).send('Server error');
     }
+  });
 
-    const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
-    const supplier = supplierRows[0];
-    res.render('supplier_place_order', { supplier, shops });
-  } catch (err) {
-    console.error("❌ Error loading supplier order form:", err);
-    res.status(500).send('Server error');
-  }
-});
+  // POST route for placing a supplier order
+  app.post('/suppliers/:id/ordering', async (req, res) => {
+    const supplierId = req.params.id;
+    const {
+      shop_id,
+      supply_total_amount,
+      notes,
+      SKU_num,
+      desc_item,
+      quantity,
+      unit_price,
+      unit_of_measurement
+    } = req.body;
 
-// POST route for placing a supplier order
-app.post('/suppliers/:id/ordering', async (req, res) => {
-  const supplierId = req.params.id;
-  const {
-    shop_id,
-    supply_total_amount,
-    notes,
-    SKU_num,
-    desc_item,
-    quantity,
-    unit_price,
-    unit_of_measurement
-  } = req.body;
-
-  try {
-    const [shopSupplierRows] = await connection.execute(`
+    try {
+      const [shopSupplierRows] = await connection.execute(`
       SELECT shop_supplier_id FROM shop_suppliers WHERE supplier_id = ? AND shop_id = ?
     `, [supplierId, shop_id]);
 
-    if (!shopSupplierRows.length) {
-      return res.status(400).send('Invalid supplier-shop relationship');
-    }
+      if (!shopSupplierRows.length) {
+        return res.status(400).send('Invalid supplier-shop relationship');
+      }
 
-    const shopSupplierId = shopSupplierRows[0].shop_supplier_id;
+      const shopSupplierId = shopSupplierRows[0].shop_supplier_id;
 
-    const [orderResult] = await connection.execute(`
+      const [orderResult] = await connection.execute(`
       INSERT INTO supplier_orders (shop_supplier_id, supply_total_amount, notes)
       VALUES (?, ?, ?)
     `, [shopSupplierId, supply_total_amount || 0, notes || null]);
 
-    const orderId = orderResult.insertId;
+      const orderId = orderResult.insertId;
 
-    if (Array.isArray(desc_item)) {
-      for (let i = 0; i < desc_item.length; i++) {
-        if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
-          await connection.execute(`
+      if (Array.isArray(desc_item)) {
+        for (let i = 0; i < desc_item.length; i++) {
+          if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
+            await connection.execute(`
             INSERT INTO supplier_orders_transaction
               (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
             VALUES (?, ?, ?, ?, ?, ?)
           `, [orderId, SKU_num[i], desc_item[i], quantity[i], unit_of_measurement[i], unit_price[i]]);
+          }
         }
-      }
-    } else {
-      await connection.execute(`
+      } else {
+        await connection.execute(`
         INSERT INTO supplier_orders_transaction
           (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
         VALUES (?, ?, ?, ?, ?, ?)
       `, [orderId, SKU_num, desc_item, quantity, unit_of_measurement, unit_price]);
-    }
+      }
 
-    // Email supplier
-    const [supplierData] = await connection.execute(
-      `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
-      [supplierId]
-    );
+      // Email supplier
+      const [supplierData] = await connection.execute(
+        `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
+        [supplierId]
+      );
 
-    const [items] = await connection.execute(
-      `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
+      const [items] = await connection.execute(
+        `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
        FROM supplier_orders_transaction 
        WHERE supply_order_id = ?`,
-      [orderId]
-    );
+        [orderId]
+      );
 
-    const itemList = items.map(item =>
-      `<li>${item.desc_item} ${item.SKU_num} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
-    ).join('');
+      const itemList = items.map(item =>
+        `<li>${item.desc_item} ${item.SKU_num} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
+      ).join('');
 
-    const transporter = nodemailer.createTransport({
-      host: "sandbox.smtp.mailtrap.io",
-      port: 2525,
-      auth: {
-        user: "932d99f01e8c4e",
-        pass: "0ee68c955b8d67"
-      }
-    });
+      const transporter = nodemailer.createTransport({
+        host: "sandbox.smtp.mailtrap.io",
+        port: 2525,
+        auth: {
+          user: "932d99f01e8c4e",
+          pass: "0ee68c955b8d67"
+        }
+      });
 
-    const mailOptions = {
-      from: 'orders@yourbusiness.com',
-      to: supplierData[0].supplier_email,
-      subject: `New Order Placed - Order #${orderId}`,
-      html: `
+      const mailOptions = {
+        from: 'orders@yourbusiness.com',
+        to: supplierData[0].supplier_email,
+        subject: `New Order Placed - Order #${orderId}`,
+        html: `
         <h3>Dear ${supplierData[0].supplier_name},</h3>
         <p>We have placed a new order. Here are the details:</p>
         <ul>${itemList}</ul>
         <p>Thank you!</p>
       `
-    };
+      };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("❌ Email failed to send:", error);
-      } else {
-        console.log("✅ Email sent:", info.response);
-      }
-    });
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("❌ Email failed to send:", error);
+        } else {
+          console.log("✅ Email sent:", info.response);
+        }
+      });
 
-    res.redirect(`/supplier-orders/${orderId}/transaction`);
-  } catch (err) {
-    console.error("❌ Error placing supplier order:", err);
-    res.status(500).send('Server error');
-  }
-});
-
+      res.redirect(`/supplier-orders/${orderId}/transaction`);
+    } catch (err) {
+      console.error("❌ Error placing supplier order:", err);
+      res.status(500).send('Server error');
+    }
+  });
 
   // GET route to view details of a specific supplier order
-app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
-  const orderId = req.params.orderId;
+  app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
+    const orderId = req.params.orderId;
 
-  try {
-    const [orderItems] = await connection.execute(`
+    try {
+      const [orderItems] = await connection.execute(`
       SELECT 
         sot.order_item_id,
         sot.SKU_num,
@@ -683,24 +682,23 @@ app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
       WHERE sot.supply_order_id = ?
     `, [orderId]);
 
-    if (!orderItems.length) {
-      return res.status(404).send("Order not found");
+      if (!orderItems.length) {
+        return res.status(404).send("Order not found");
+      }
+
+      res.render('supplier_orders_transaction', {
+        orderId,
+        items: orderItems,
+        supplierName: orderItems[0].supplier_name,
+        shopName: orderItems[0].shop_name,
+        orderDate: orderItems[0].supply_order_date
+      });
+
+    } catch (err) {
+      console.error("❌ Failed to load supplier order transaction detail:", err);
+      res.status(500).send("Server error");
     }
-
-    res.render('supplier_orders_transaction', {
-      orderId,
-      items: orderItems,
-      supplierName: orderItems[0].supplier_name,
-      shopName: orderItems[0].shop_name,
-      orderDate: orderItems[0].supply_order_date
-    });
-
-  } catch (err) {
-    console.error("❌ Failed to load supplier order transaction detail:", err);
-    res.status(500).send("Server error");
-  }
-});
-
+  });
 
   //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
@@ -709,27 +707,27 @@ app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
 
     let query = `
       SELECT 
-        so.supply_order_id,
-        so.supply_order_date,
-        su.supplier_name,
-        sh.shop_email,
-        soi.order_item_id,
-        soi.desc_item,
-        soi.quantity,
-        soi.received_quantity,
-        soi.unit_price,
-        soi.status
-        
-      FROM supplier_orders so
-      JOIN shops sh ON so.shop_id = sh.shop_id
-      JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
-      JOIN suppliers su ON so.supplier_id = su.supplier_id
-      WHERE soi.status NOT IN ('completed', 'cancelled')
+      sot.order_item_id,
+      sot.desc_item,
+      sot.quantity,
+      sot.received_quantity,
+      sot.unit_price,
+      sot.status,
+      so.supply_order_id,
+      so.supply_order_date,
+      su.supplier_name,       
+      sh.shop_email
+      FROM supplier_orders_transaction sot
+      JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+      JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
+      JOIN shops sh ON ss.shop_id = sh.shop_id
+      JOIN suppliers su ON ss.supplier_id = su.supplier_id
+      WHERE sot.status NOT IN ('completed', 'cancelled')
     `;
 
     const params = [];
 
-    // 🟨 If dates provided, append using AND
+    // 🗓️ Optional date filtering
     if (start_date && end_date) {
       query += ` AND DATE(so.supply_order_date) BETWEEN ? AND ?`;
       params.push(start_date, end_date);
@@ -746,34 +744,37 @@ app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
         end_date
       });
     } catch (err) {
-      console.error("❌ Failed to load supplier order transactions:", err);
+      console.error("Failed to load supplier order transactions:", err);
       res.status(500).send('Server error');
     }
   });
-
 
   //GET route to show completed transaction
   app.get('/supplier-orders/completed', async (req, res) => {
     try {
       const [completedOrders] = await connection.execute(`
-      SELECT 
-        so.supply_order_id,
-        so.supply_order_date,
-        su.supplier_name,
-        sh.shop_email,
-        soi.order_item_id,
-        soi.desc_item,
-        soi.quantity,
-        soi.unit_price,
-        soi.status,
-        so.updated_at AS delivery_date
-       FROM supplier_orders so
-       JOIN shops sh ON so.shop_id = sh.shop_id
-       JOIN supplier_order_items soi ON so.supply_order_id = soi.supply_order_id
-       JOIN suppliers su ON so.supplier_id =su.supplier_id
-       WHERE soi.status = 'completed'
-       ORDER BY so.supply_order_date ASC
-    `);
+        SELECT 
+          sot.order_item_id,
+          sot.desc_item,
+          sot.quantity,
+          sot.unit_price,
+          sot.status,
+          sot.received_quantity,
+          sot.unit_of_measurement,
+          so.supply_order_id,
+          so.supply_order_date,
+          so.updated_at AS delivery_date,
+          su.supplier_name,
+          sh.shop_email,
+          sh.shop_name
+        FROM supplier_orders_transaction sot
+        JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+        JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
+        JOIN suppliers su ON ss.supplier_id = su.supplier_id
+        JOIN shops sh ON ss.shop_id = sh.shop_id
+        WHERE sot.status = 'completed'
+        ORDER BY so.supply_order_date ASC
+      `);
 
       res.render('supplier_orders_completed', { completedOrders });
     } catch (err) {
@@ -786,70 +787,31 @@ app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
     try {
       const [cancelledOrders] = await connection.execute(`
         SELECT 
-          s.supplier_name,
-          so.status,
+          sot.order_item_id,
+          sot.desc_item,
+          sot.quantity,
+          sot.unit_price,
+          so.supply_order_id,
           so.notes,
-          so.updated_at
-        FROM supplier_orders so
-        JOIN suppliers s ON so.supplier_id = s.supplier_id
-        WHERE so.status = 'cancelled'
+          so.updated_at AS cancelled_at,
+          su.supplier_name,
+          sh.shop_name
+        FROM supplier_orders_transaction sot
+        JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+        JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
+        JOIN suppliers su ON ss.supplier_id = su.supplier_id
+        JOIN shops sh ON ss.shop_id = sh.shop_id
+        WHERE sot.status = 'cancelled'
         ORDER BY so.updated_at DESC
       `);
 
       res.render('supplier_orders_cancellation', { cancelledOrders });
     } catch (err) {
-      console.error("❌ Failed to load cancelled orders:", err);
+      console.error("Failed to load cancelled orders:", err);
       res.status(500).send('Server error');
     }
   });
 
-  //POST route for cancellation or partial received of item/s
-  // app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
-  //   const itemId = req.params.itemId;
-  //   const { status, redirect, notes, received_quantity } = req.body;
-  //   const supplyOrderId = req.query.order;
-
-  //   try {
-  //     console.log("🔄 Updating item:", itemId, "| Status:", status, "| Received:", received_quantity);
-
-  //     if (status === 'cancelled') {
-  //       await connection.execute(
-  //         `UPDATE supplier_orders 
-  //          JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
-  //          SET supplier_orders.status = ?, supplier_orders.notes = ?
-  //          WHERE soi.order_item_id = ?`,
-  //         [status, notes, itemId]
-  //       );
-  //     } else if (status === 'partially_received') {
-  //       const actualReceived = parseFloat(received_quantity || 0);
-
-  //       const [result] = await connection.execute(
-  //         `UPDATE supplier_order_items 
-  //          SET 
-  //            received_quantity = ?, 
-  //            status = CASE 
-  //              WHEN ? >= quantity THEN 'completed'
-  //              ELSE 'partially_received'
-  //            END
-  //          WHERE order_item_id = ?`,
-  //         [actualReceived, actualReceived, itemId]
-  //       );
-
-  //       console.log("✅ Partial update result:", result);
-  //     } else {
-  //       await connection.execute(
-  //         `UPDATE supplier_order_items 
-  //          SET status = ? 
-  //          WHERE order_item_id = ?`,
-  //         [status, itemId]
-  //       );
-  //     }
-  //   res.redirect(redirect || '/supplier-orders/transaction');
-  // } catch (err) {
-  //   console.error("❌ Failed to update status or note:", err);
-  //   res.status(500).send('Server error');
-  // }
-  // });
 
   // POST route for /supplier-orders/item/:itemId/status
   app.post('/supplier-orders/item/:itemId/status', async (req, res) => {
@@ -862,69 +824,60 @@ app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
 
       if (status === 'cancelled') {
         await connection.execute(
-          `UPDATE supplier_orders 
-         JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
-         SET supplier_orders.status = ?, supplier_orders.notes = ?
-         WHERE soi.order_item_id = ?`,
+          `UPDATE supplier_orders_transaction 
+           SET status = ?, notes = ? 
+           WHERE order_item_id = ?`,
           [status, notes, itemId]
         );
+
       } else if (status === 'partially_received') {
         const actualReceived = parseFloat(received_quantity || 0);
 
-        const [rows] = await connection.execute(
-          `SELECT quantity FROM supplier_order_items WHERE order_item_id = ?`,
+        // Get the original quantity
+        const [[row]] = await connection.execute(
+          `SELECT quantity, inv_item_id FROM supplier_orders_transaction WHERE order_item_id = ?`,
           [itemId]
         );
-        const originalQuantity = rows[0]?.quantity || 0;
+
+        const originalQuantity = row?.quantity || 0;
+        const invItemId = row?.inv_item_id;
 
         const newStatus = actualReceived >= originalQuantity ? 'completed' : 'partially_received';
 
+        // Update transaction status and quantity
         await connection.execute(
-          `UPDATE supplier_order_items 
-         SET received_quantity = ?, 
-             status = CASE 
-               WHEN ? >= quantity THEN 'completed'
-               ELSE 'partially_received'
-             END
-         WHERE order_item_id = ?`,
+          `UPDATE supplier_orders_transaction
+           SET received_quantity = ?, 
+               status = CASE 
+                 WHEN ? >= quantity THEN 'completed'
+                 ELSE 'partially_received'
+               END
+           WHERE order_item_id = ?`,
           [actualReceived, actualReceived, itemId]
         );
 
-        if (newStatus === 'completed') {
-          // Fetch inv_item_id
-          const [[itemData]] = await connection.execute(`
-          SELECT inv_item_id, received_quantity 
-          FROM supplier_order_items 
-          WHERE order_item_id = ?`,
-            [itemId]
+        // If fully received, update inventory and log transaction
+        if (newStatus === 'completed' && invItemId) {
+          await connection.execute(
+            `UPDATE inventory_items 
+             SET inv_item_current_quantity = inv_item_current_quantity + ?
+             WHERE inv_item_id = ?`,
+            [actualReceived, invItemId]
           );
 
-          const invItemId = itemData?.inv_item_id;
-          const qtyReceived = itemData?.received_quantity;
-
-          if (invItemId && qtyReceived) {
-            // Update inventory
-            await connection.execute(`
-            UPDATE inventory_items 
-            SET inv_item_current_quantity = inv_item_current_quantity + ? 
-            WHERE inv_item_id = ?`,
-              [qtyReceived, invItemId]
-            );
-
-            // Insert inventory transaction log
-            await connection.execute(`
-            INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
-            VALUES (?, ?, 'replenish', ?)`,
-              [invItemId, qtyReceived, `Replenished from supplier order item ID: ${itemId}`]
-            );
-          }
+          await connection.execute(
+            `INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+             VALUES (?, ?, 'replenish', ?)`,
+            [invItemId, actualReceived, `Replenished from supplier order item ID: ${itemId}`]
+          );
         }
 
       } else {
+        // Simple status update
         await connection.execute(
-          `UPDATE supplier_order_items 
-         SET status = ? 
-         WHERE order_item_id = ?`,
+          `UPDATE supplier_orders_transaction 
+           SET status = ? 
+           WHERE order_item_id = ?`,
           [status, itemId]
         );
       }

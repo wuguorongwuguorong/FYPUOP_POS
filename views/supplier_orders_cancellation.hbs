@@ -1,30 +1,40 @@
 {{#extends "base"}}
+
 {{#block "content"}}
 
-<h2 class="mt-4 mb-3">Cancelled Supplier Orders</h2>
+<h2 class="mt-4 mb-3">❌ Cancelled Supplier Orders</h2>
 
 <a href="/supplier-orders/transaction" class="btn btn-secondary mb-3">← Back to Active Orders</a>
 
-<table class="table table-bordered">
-  <thead class="table-light">
-    <tr>
-      <th>Supplier</th>
-      <th>Status</th>
-      <th>Cancellation Reason</th>
-      <th>Last Updated</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each cancelledOrders}}
-    <tr>
-      <td>{{this.supplier_name}}</td>
-      <td><span class="badge bg-danger">{{this.status}}</span></td>
-      <td>{{this.notes}}</td>
-      <td>{{formatDate this.updated_at}}</td>
-    </tr>
-    {{/each}}
-  </tbody>
-</table>
+{{#if cancelledOrders.length}}
+  <table class="table table-bordered">
+    <thead class="table-light">
+      <tr>
+        <th>Supplier</th>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Status</th>
+        <th>Cancellation Reason</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each cancelledOrders}}
+        <tr>
+          <td>{{this.supplier_name}}</td>
+          <td>{{this.desc_item}}</td>
+          <td>{{this.quantity}} {{this.unit_of_measurement}}</td>
+          <td><span class="badge bg-danger">{{this.status}}</span></td>
+          <td>{{this.notes}}</td>
+          <td>{{formatDate this.updated_at}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+{{else}}
+  <div class="alert alert-info">There are no cancelled orders at the moment.</div>
+{{/if}}
 
 {{/block}}
+
 {{/extends}}
