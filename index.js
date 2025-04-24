@@ -778,47 +778,6 @@ async function main() {
     }
   });
 
-  //POST route after selecting individual row from pending to completed
-  // app.post('/supplier-orders/item/:id/status', async (req, res) => {
-  //   const itemId = req.params.id;
-  //   const { status, notes, received_quantity } = req.body;
-  //   const redirectUrl = req.query.order ? `/supplier-orders/transaction` : '/'; // fallback redirect
-
-  //   try {
-  //     if (status === 'cancelled') {
-  //       // handle cancellation
-  //       await connection.execute(
-  //         `UPDATE supplier_orders 
-  //          JOIN supplier_order_items soi ON supplier_orders.supply_order_id = soi.supply_order_id
-  //          SET supplier_orders.status = ?, supplier_orders.notes = ?
-  //          WHERE soi.order_item_id = ?`,
-  //         [status, notes, itemId]
-  //       );
-  //     } else if (status === 'partially_received') {
-  //       // handle partial received
-  //       await connection.execute(
-  //         `UPDATE supplier_order_items 
-  //          SET status = ?, received_quantity = ? 
-  //          WHERE order_item_id = ?`,
-  //         [status, received_quantity, itemId]
-  //       );
-  //     } else {
-  //       // handle other status updates
-  //       await connection.execute(
-  //         `UPDATE supplier_order_items 
-  //          SET status = ? 
-  //          WHERE order_item_id = ?`,
-  //         [status, itemId]
-  //       );
-  //     }
-
-  //     res.redirect(redirectUrl);
-  //   } catch (err) {
-  //     console.error("❌ Failed to update status:", err);
-  //     res.status(500).send("Server error");
-  //   }
-  // });
-
 
   //GET route to show completed transaction
   app.get('/supplier-orders/completed', async (req, res) => {
