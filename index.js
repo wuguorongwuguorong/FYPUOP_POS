@@ -468,7 +468,6 @@ async function main() {
 
       const supplier = rows[0];
 
-      // Optional: Get all available shop IDs
       const [shops] = await connection.execute("SELECT shop_id FROM shops");
 
       res.render('suppliers_edit', { supplier, shops });
@@ -524,210 +523,184 @@ async function main() {
 
   //***** Transaction of ALL Suppliers orders starts here *****
   //GET Supplier Ordering
-  app.get('/suppliers/:id/ordering', async (req, res) => {
-    const supplierId = req.params.id;
+app.get('/suppliers/:id/ordering', async (req, res) => {
+  const supplierId = req.params.id;
 
-    try {
-      const [supplierRows] = await connection.execute(`
-        SELECT 
-          s.supplier_id,
-          s.supplier_name,
-          s.supplier_email,
-          ss.is_active,
-          sh.shop_name
-        FROM suppliers s
-        JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
-        JOIN shops sh ON ss.shop_id = sh.shop_id
-        WHERE s.supplier_id = ?
-      `, [supplierId]);
+  try {
+    const [supplierRows] = await connection.execute(`
+      SELECT 
+        s.supplier_id,
+        s.supplier_name,
+        s.supplier_email,
+        ss.shop_supplier_id,
+        ss.is_active,
+        sh.shop_name,
+        sh.shop_id
+      FROM suppliers s
+      JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
+      JOIN shops sh ON ss.shop_id = sh.shop_id
+      WHERE s.supplier_id = ?
+    `, [supplierId]);
 
-      const [shops] = await connection.execute(
-        `SELECT shop_id, shop_name FROM shops`
-      );
-
-      if (!supplierRows.length) {
-        return res.status(404).send('Supplier not found');
-      }
-
-      const supplier = supplierRows[0];
-      res.render('supplier_place_order', { supplier, shops });
-    } catch (err) {
-      console.error("Error loading supplier order form:", err);
-      res.status(500).send('Server error');
+    if (!supplierRows.length) {
+      return res.status(404).send('Supplier not found');
     }
-  });
 
-  //Post route for supplier ordered items
-  app.post('/suppliers/:id/ordering', async (req, res) => {
-    const supplierId = req.params.id;
-    const {
-      shop_id,
-      supply_total_amount,
-      notes,
-      SKU_num,
-      desc_item,
-      quantity,
-      unit_price,
-      unit_of_measurement
-    } = req.body;
+    const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+    const supplier = supplierRows[0];
+    res.render('supplier_place_order', { supplier, shops });
+  } catch (err) {
+    console.error("❌ Error loading supplier order form:", err);
+    res.status(500).send('Server error');
+  }
+});
 
-    console.log("🧾 Items submitted:", {
-      desc_item,
-      quantity,
-      unit_price,
-      unit_of_measurement,
-      SKU_num
+// POST route for placing a supplier order
+app.post('/suppliers/:id/ordering', async (req, res) => {
+  const supplierId = req.params.id;
+  const {
+    shop_id,
+    supply_total_amount,
+    notes,
+    SKU_num,
+    desc_item,
+    quantity,
+    unit_price,
+    unit_of_measurement
+  } = req.body;
+
+  try {
+    const [shopSupplierRows] = await connection.execute(`
+      SELECT shop_supplier_id FROM shop_suppliers WHERE supplier_id = ? AND shop_id = ?
+    `, [supplierId, shop_id]);
+
+    if (!shopSupplierRows.length) {
+      return res.status(400).send('Invalid supplier-shop relationship');
+    }
+
+    const shopSupplierId = shopSupplierRows[0].shop_supplier_id;
+
+    const [orderResult] = await connection.execute(`
+      INSERT INTO supplier_orders (shop_supplier_id, supply_total_amount, notes)
+      VALUES (?, ?, ?)
+    `, [shopSupplierId, supply_total_amount || 0, notes || null]);
+
+    const orderId = orderResult.insertId;
+
+    if (Array.isArray(desc_item)) {
+      for (let i = 0; i < desc_item.length; i++) {
+        if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
+          await connection.execute(`
+            INSERT INTO supplier_orders_transaction
+              (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, [orderId, SKU_num[i], desc_item[i], quantity[i], unit_of_measurement[i], unit_price[i]]);
+        }
+      }
+    } else {
+      await connection.execute(`
+        INSERT INTO supplier_orders_transaction
+          (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [orderId, SKU_num, desc_item, quantity, unit_of_measurement, unit_price]);
+    }
+
+    // Email supplier
+    const [supplierData] = await connection.execute(
+      `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
+      [supplierId]
+    );
+
+    const [items] = await connection.execute(
+      `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
+       FROM supplier_orders_transaction 
+       WHERE supply_order_id = ?`,
+      [orderId]
+    );
+
+    const itemList = items.map(item =>
+      `<li>${item.desc_item} ${item.SKU_num} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
+    ).join('');
+
+    const transporter = nodemailer.createTransport({
+      host: "sandbox.smtp.mailtrap.io",
+      port: 2525,
+      auth: {
+        user: "932d99f01e8c4e",
+        pass: "0ee68c955b8d67"
+      }
     });
-    try {
-      const [validLinks] = await connection.execute(`
-        SELECT ss.shop_supplier_id
-        FROM shop_suppliers ss
-        WHERE ss.supplier_id = ? AND ss.shop_id = ?
-      `, [supplierId, shop_id]);
 
-      if (!validLinks.length) {
-        return res.status(400).send('Invalid supplier-shop relationship.');
+    const mailOptions = {
+      from: 'orders@yourbusiness.com',
+      to: supplierData[0].supplier_email,
+      subject: `New Order Placed - Order #${orderId}`,
+      html: `
+        <h3>Dear ${supplierData[0].supplier_name},</h3>
+        <p>We have placed a new order. Here are the details:</p>
+        <ul>${itemList}</ul>
+        <p>Thank you!</p>
+      `
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("❌ Email failed to send:", error);
+      } else {
+        console.log("✅ Email sent:", info.response);
       }
+    });
 
-      const [orderResult] = await connection.execute(
-        `INSERT INTO supplier_orders (supplier_id, shop_id, supply_total_amount, notes)
-         VALUES (?, ?, ?, ?)`,
-        [supplierId, shop_id, supply_total_amount || 0, notes || null]
-      );
-
-      const orderId = orderResult.insertId;
-      if (Array.isArray(desc_item)) {
-        for (let i = 0; i < desc_item.length; i++) {
-          if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
-            await connection.execute(
-              `INSERT INTO supplier_order_items 
-              (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [
-                orderId,
-                supplierId,
-                SKU_num[i],
-                desc_item[i],
-                quantity[i],
-                unit_of_measurement[i],
-                unit_price[i]
-              ]
-            );
-          }
-        }
-      } else if (desc_item) {
-        // handle single-item order (not in array)
-        await connection.execute(
-          `INSERT INTO supplier_order_items 
-          (supply_order_id, supplier_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            orderId,
-            supplierId,
-            SKU_num,
-            desc_item,
-            quantity,
-            unit_of_measurement,
-            unit_price
-          ]
-        );
-      }
-
-      console.log("New order ID:", orderId);
-
-      const [supplierData] = await connection.execute(
-        `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
-        [supplierId]
-      );
-
-      const [items] = await connection.execute(
-        `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
-         FROM supplier_order_items 
-         WHERE supply_order_id = ?`,
-        [orderId]
-      );
-
-      const itemList = items.map(item =>
-        `<li>${item.desc_item} ${item.SKU_num} - ${item.quantity} ${item.unit_of_measurement} @ $${item.unit_price}</li>`
-      ).join('');
+    res.redirect(`/supplier-orders/${orderId}/transaction`);
+  } catch (err) {
+    console.error("❌ Error placing supplier order:", err);
+    res.status(500).send('Server error');
+  }
+});
 
 
-      const transporter = nodemailer.createTransport({
-        host: "sandbox.smtp.mailtrap.io",
-        port: 2525,
-        auth: {
-          user: "932d99f01e8c4e",
-          pass: "0ee68c955b8d67"
-        }
-      });
+  // GET route to view details of a specific supplier order
+app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
+  const orderId = req.params.orderId;
 
+  try {
+    const [orderItems] = await connection.execute(`
+      SELECT 
+        sot.order_item_id,
+        sot.SKU_num,
+        sot.desc_item,
+        sot.quantity,
+        sot.unit_price,
+        sot.unit_of_measurement,
+        so.supply_order_date,
+        s.supplier_name,
+        sh.shop_name
+      FROM supplier_orders_transaction sot
+      JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+      JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
+      JOIN suppliers s ON ss.supplier_id = s.supplier_id
+      JOIN shops sh ON ss.shop_id = sh.shop_id
+      WHERE sot.supply_order_id = ?
+    `, [orderId]);
 
-      const mailOptions = {
-        from: '"ABC Company" <octupusroti123@gmail.com>',
-        //to: supplierData[0].supplier_email,
-        to: 'daniel.stillpixels@gmail.com',
-        subject: `New Order from Your Company - Order #${orderId}`,
-        html: `
-          <h3>Dear ${supplierData[0].supplier_name},</h3>
-          <p>We have placed a new order. Here are the details:</p>
-          <ul>${itemList}</ul>
-          <p>Thank you!</p>
-        `
-      };
-
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("❌ Email failed to send:", error);
-        } else {
-          console.log("✅ Email sent:", info.response);
-          console.log("🔍 Preview URL:", nodemailer.getTestMessageUrl(info));
-        }
-      });
-
-      res.redirect(`/supplier-orders/${orderId}/transaction`);
-    } catch (err) {
-      console.error("Error placing supplier order:", err);
-      res.status(500).send('Server error');
+    if (!orderItems.length) {
+      return res.status(404).send("Order not found");
     }
-  });
 
-  //GET route to show all transaction after submitting
-  app.get('/supplier-orders/:orderId/transaction', async (req, res) => {
-    const orderId = req.params.orderId;
+    res.render('supplier_orders_transaction', {
+      orderId,
+      items: orderItems,
+      supplierName: orderItems[0].supplier_name,
+      shopName: orderItems[0].shop_name,
+      orderDate: orderItems[0].supply_order_date
+    });
 
-    try {
-      const [orderRows] = await connection.execute(`
-        SELECT 
-          so.*, 
-          s.supplier_name, 
-          s.supplier_email,
-          sh.shop_name,
-          sh.shop_address_1,
-          sh.shop_address_2
-        FROM supplier_orders so
-        JOIN suppliers s ON so.supplier_id = s.supplier_id
-        JOIN shops sh ON so.shop_id = sh.shop_id
-        WHERE so.supply_order_id = ?
-      `, [orderId]);
+  } catch (err) {
+    console.error("❌ Failed to load supplier order transaction detail:", err);
+    res.status(500).send("Server error");
+  }
+});
 
-      if (!orderRows.length) {
-        return res.status(404).send('Order not found');
-      }
-
-      const [items] = await connection.execute(`
-        SELECT SKU_num, desc_item, quantity, unit_price, unit_of_measurement, status
-        FROM supplier_order_items
-        WHERE supply_order_id = ?
-      `, [orderId]);
-
-      const order = orderRows[0];
-
-      res.render('suppliers_orders_transaction', { order, items });
-    } catch (err) {
-      console.error("Error fetching transaction summary:", err);
-      res.status(500).send('Server error');
-    }
-  });
 
   //GET route for all pending transaction
   app.get('/supplier-orders/transaction', async (req, res) => {
@@ -918,7 +891,7 @@ async function main() {
         );
 
         if (newStatus === 'completed') {
-          // ✅ Fetch inv_item_id
+          // Fetch inv_item_id
           const [[itemData]] = await connection.execute(`
           SELECT inv_item_id, received_quantity 
           FROM supplier_order_items 
@@ -930,7 +903,7 @@ async function main() {
           const qtyReceived = itemData?.received_quantity;
 
           if (invItemId && qtyReceived) {
-            // ✅ Update inventory
+            // Update inventory
             await connection.execute(`
             UPDATE inventory_items 
             SET inv_item_current_quantity = inv_item_current_quantity + ? 
@@ -938,7 +911,7 @@ async function main() {
               [qtyReceived, invItemId]
             );
 
-            // ✅ Insert inventory transaction log
+            // Insert inventory transaction log
             await connection.execute(`
             INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
             VALUES (?, ?, 'replenish', ?)`,
@@ -967,8 +940,6 @@ async function main() {
 
   //***** Receipe starts here ******/
   //GET receipe route
-  // GET route to display recipe creation form and list
-  // GET route to display recipe creation form and list
   app.get('/recipes', async (req, res) => {
     try {
       const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
@@ -989,17 +960,17 @@ async function main() {
   });
 
   // GET route for new recipe
-app.get('/recipes/create', async (req, res) => {
-  try {
-    const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
-    const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+  app.get('/recipes/create', async (req, res) => {
+    try {
+      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
 
-    res.render('recipes_create', { inventoryItems, menuItems });
-  } catch (err) {
-    console.error('❌ Failed to load recipe creation form:', err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('recipes_create', { inventoryItems, menuItems });
+    } catch (err) {
+      console.error('❌ Failed to load recipe creation form:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
   // POST route for new recipe
   app.post('/recipes/create', async (req, res) => {

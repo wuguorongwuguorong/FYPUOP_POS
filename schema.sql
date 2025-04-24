@@ -98,7 +98,7 @@ ALTER TABLE supplier_orders ADD COLUMN shop_supplier_id int;
 ALTER TABLE supplier_orders ADD CONSTRAINT fk_suppliers_orders_confirmation FOREIGN KEY(shop_supplier_id) REFERENCES shop_suppliers(shop_supplier_id);
 
 
-CREATE TABLE IF NOT EXISTS supplier_order_transaction(
+CREATE TABLE IF NOT EXISTS supplier_orders_transaction(
   order_item_id int NOT NULL AUTO_INCREMENT,
   SKU_num varchar(16) DEFAULT NULL,
   desc_item varchar(100) NOT NULL,
