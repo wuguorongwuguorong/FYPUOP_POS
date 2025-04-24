@@ -317,7 +317,7 @@ async function main() {
 
       const [completedOrders] = await connection.execute(`
         SELECT soi.order_item_id, soi.desc_item, soi.quantity, soi.unit_price, so.supply_order_date
-        FROM supplier_order_items soi
+        FROM supplier_orders_transaction soi
         JOIN supplier_orders so ON soi.supply_order_id = so.supply_order_id
         WHERE soi.status = 'completed' 
         ORDER BY so.supply_order_date DESC
@@ -830,51 +830,55 @@ async function main() {
       } else if (status === 'partially_received') {
         const actualReceived = parseFloat(received_quantity || 0);
 
-        // Get the original quantity
         const [[row]] = await connection.execute(
-          `SELECT quantity, inv_item_id FROM supplier_orders_transaction WHERE order_item_id = ?`,
+          `SELECT quantity
+          FROM supplier_orders_transaction
+          WHERE order_item_id = ? `, 
           [itemId]
         );
 
+        if (!row) {
+          console.error("❌ Order item not found.");
+          return res.status(404).send("Order item not found");
+        }
+
         const originalQuantity = row?.quantity || 0;
-        const invItemId = row?.inv_item_id;
+        const invItemId = row?.inv_item_id || null;
 
         const newStatus = actualReceived >= originalQuantity ? 'completed' : 'partially_received';
 
         // Update transaction status and quantity
         await connection.execute(
           `UPDATE supplier_orders_transaction
-           SET received_quantity = ?, 
-               status = CASE 
+           SET received_quantity = ?,
+          status = CASE 
                  WHEN ? >= quantity THEN 'completed'
                  ELSE 'partially_received'
                END
-           WHERE order_item_id = ?`,
+           WHERE order_item_id = ? `,
           [actualReceived, actualReceived, itemId]
         );
 
-        // If fully received, update inventory and log transaction
         if (newStatus === 'completed' && invItemId) {
           await connection.execute(
             `UPDATE inventory_items 
              SET inv_item_current_quantity = inv_item_current_quantity + ?
-             WHERE inv_item_id = ?`,
+          WHERE inv_item_id = ? `,
             [actualReceived, invItemId]
           );
 
           await connection.execute(
-            `INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
-             VALUES (?, ?, 'replenish', ?)`,
-            [invItemId, actualReceived, `Replenished from supplier order item ID: ${itemId}`]
+            `INSERT INTO inventory_transactions(inv_item_id, qty_change, transaction_type, notes)
+             VALUES(?, ?, 'replenish', ?)`,
+            [invItemId, actualReceived, `Replenished from supplier order item ID: ${ itemId }`]
           );
         }
 
       } else {
-        // Simple status update
         await connection.execute(
           `UPDATE supplier_orders_transaction 
-           SET status = ? 
-           WHERE order_item_id = ?`,
+           SET status = ?
+          WHERE order_item_id = ? `,
           [status, itemId]
         );
       }
@@ -900,7 +904,7 @@ async function main() {
       LEFT JOIN inventory_items i ON r.inv_item_id = i.inv_item_id
       LEFT JOIN menu_items m ON r.menu_item_id = m.menu_item_id
       ORDER BY r.created_at DESC
-    `);
+          `);
 
       res.render('recipes', { inventoryItems, menuItems, recipes });
     } catch (err) {
@@ -929,8 +933,8 @@ async function main() {
     try {
 
       await connection.execute(
-        `INSERT INTO recipes (rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO recipes(rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
+         VALUES(?, ?, ?, ?, ?, ?)`,
         [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
       );
 
@@ -947,7 +951,7 @@ async function main() {
 
     try {
       const [[recipe]] = await connection.execute(
-        `SELECT * FROM recipes WHERE recipe_id = ?`,
+        `SELECT * FROM recipes WHERE recipe_id = ? `,
         [recipeId]
       );
 
@@ -974,7 +978,7 @@ async function main() {
       await connection.execute(
         `UPDATE recipes 
        SET rec_desc = ?, ingredients = ?, quantity = ?, rec_ing_uom = ?, inv_item_id = ?, menu_item_id = ?
-       WHERE recipe_id = ?`,
+          WHERE recipe_id = ? `,
         [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id, recipeId]
       );
 
@@ -994,16 +998,16 @@ async function main() {
       const [employees] = await connection.execute(`
       SELECT 
         e.emp_id,
-        e.emp_name,
-        e.emp_hp,
-        r.emp_role,
-        r.hourly_rate,
-        r.monthly_rate,
-        s.shop_name
+          e.emp_name,
+          e.emp_hp,
+          r.emp_role,
+          r.hourly_rate,
+          r.monthly_rate,
+          s.shop_name
       FROM employees e
       LEFT JOIN employees_role r ON e.emp_role_id = r.emp_role_id
       LEFT JOIN shops s ON e.shop_id = s.shop_id
-    `);
+          `);
 
       res.render('employees_list', { employees, shopName: employees[0]?.shop_name });
     } catch (err) {
@@ -1028,7 +1032,7 @@ async function main() {
 
     try {
       await connection.execute(
-        `INSERT INTO employees_role (emp_role, hourly_rate, monthly_rate) VALUES (?, ?, ?)`,
+        `INSERT INTO employees_role(emp_role, hourly_rate, monthly_rate) VALUES(?, ?, ?)`,
         [
           emp_role,
           hourly_rate ? parseFloat(hourly_rate) : null,
@@ -1060,8 +1064,8 @@ async function main() {
     try {
       const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
       await connection.execute(`
-        INSERT INTO employees (emp_name, emp_hp, emp_pin, shop_id, emp_role_id)
-        VALUES (?, ?, ?, ?, ?)`,
+        INSERT INTO employees(emp_name, emp_hp, emp_pin, shop_id, emp_role_id)
+        VALUES(?, ?, ?, ?, ?)`,
         [emp_name, emp_hp, hashedPin, shop_id, emp_role_id]
       );
 
@@ -1081,10 +1085,10 @@ async function main() {
       const [[employee]] = await connection.execute(
         `SELECT 
         e.emp_id, e.emp_name, e.emp_hp, e.emp_role_id, e.shop_id,
-        r.hourly_rate, r.monthly_rate
+          r.hourly_rate, r.monthly_rate
        FROM employees e
        JOIN employees_role r ON e.emp_role_id = r.emp_role_id
-       WHERE e.emp_id = ?`, [empId]
+       WHERE e.emp_id = ? `, [empId]
       );
 
       const [roles] = await connection.execute(`SELECT * FROM employees_role`);
@@ -1114,20 +1118,20 @@ async function main() {
 
       await connection.execute(`
       UPDATE employees 
-      SET emp_name = ?, emp_hp = ?, emp_role_id = ?, shop_id = ? 
-      WHERE emp_id = ?
-    `, [emp_name, emp_hp, emp_role_id, shop_id, empId]);
+      SET emp_name = ?, emp_hp = ?, emp_role_id = ?, shop_id = ?
+          WHERE emp_id = ?
+            `, [emp_name, emp_hp, emp_role_id, shop_id, empId]);
 
       await connection.execute(`
       UPDATE employees_role 
       SET hourly_rate = ?, monthly_rate = ?
-      WHERE emp_role_id = ?
-    `, [hourly_rate || null, monthly_rate || null, emp_role_id]);
+          WHERE emp_role_id = ?
+            `, [hourly_rate || null, monthly_rate || null, emp_role_id]);
 
       if (emp_pin && emp_pin.trim() !== '') {
         const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
         await connection.execute(
-          `UPDATE employees SET emp_pin = ? WHERE emp_id = ?`,
+          `UPDATE employees SET emp_pin = ? WHERE emp_id = ? `,
           [hashedPin, empId]
         );
       }
@@ -1144,7 +1148,7 @@ async function main() {
     try {
       const [employees] = await connection.execute(`
       SELECT emp_id, emp_name FROM employees
-    `);
+          `);
       res.render('employee_clocking', { employees });
     } catch (err) {
       console.error("❌ Failed to load clocking page:", err);
@@ -1159,7 +1163,7 @@ async function main() {
     try {
       const [rows] = await connection.execute(`
       SELECT emp_pin FROM employees WHERE emp_id = ?
-    `, [emp_id]);
+          `, [emp_id]);
 
       if (!rows.length) {
         return res.status(400).send("Employee not found");
@@ -1174,20 +1178,20 @@ async function main() {
       SELECT * FROM employee_clocking 
       WHERE emp_id = ? AND status = 'clocked_in' 
       ORDER BY clock_in_time DESC LIMIT 1
-    `, [emp_id]);
+          `, [emp_id]);
 
       if (existing.length) {
         await connection.execute(`
         UPDATE employee_clocking 
         SET clock_out_time = NOW(), status = 'clocked_out' 
         WHERE clocking_id = ?
-      `, [existing[0].clocking_id]);
+          `, [existing[0].clocking_id]);
       } else {
 
         await connection.execute(`
-        INSERT INTO employee_clocking (emp_id, clock_in_time, status) 
-        VALUES (?, NOW(), 'clocked_in')
-      `, [emp_id]);
+        INSERT INTO employee_clocking(emp_id, clock_in_time, status) 
+        VALUES(?, NOW(), 'clocked_in')
+            `, [emp_id]);
       }
 
       res.redirect('/employee/clocking');
@@ -1212,11 +1216,11 @@ async function main() {
       const [clockingData] = await connection.execute(
         `SELECT 
         e.emp_name,
-        ec.clocking_date,
-        SUM(ec.total_hours) AS total_hours
+          ec.clocking_date,
+          SUM(ec.total_hours) AS total_hours
       FROM employee_clocking ec
       JOIN employees e ON ec.emp_id = e.emp_id
-      ${whereClause}
+      ${ whereClause }
       GROUP BY e.emp_name, ec.clocking_date
       ORDER BY ec.clocking_date ASC`,
         params
