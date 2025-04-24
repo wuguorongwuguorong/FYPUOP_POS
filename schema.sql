@@ -92,8 +92,7 @@ CREATE TABLE IF NOT EXISTS supplier_orders (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-   FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
-   FOREIGN KEY (suppliers_id) REFERENCES suppliers(suppliers_id) ON DELETE CASCADE
+   FOREIGN KEY (shop_supplier_id) REFERENCES shop_suppliers(shop_supplier_id) ON DELETE CASCADE,
 )engine = innodb;
 ALTER TABLE supplier_orders ADD COLUMN shop_supplier_id int;
 ALTER TABLE supplier_orders ADD CONSTRAINT fk_suppliers_orders_confirmation FOREIGN KEY(shop_supplier_id) REFERENCES shop_suppliers(shop_supplier_id);
@@ -114,7 +113,7 @@ CREATE TABLE IF NOT EXISTS supplier_order_transaction(
   PRIMARY KEY (`order_item_id`),
   KEY `fk_supplier_ordering_transaction` (`supply_order_id`),
   CONSTRAINT `fk_supplier_ordering_transaction` FOREIGN KEY (`supply_order_id`) REFERENCES `supplier_orders` (`supply_order_id`)
-) ENGINE=InnoDB DEFAULT 
+) ENGINE=InnoDB 
 ALTER TABLE supplier_orders_transaction ADD COLUMN supply_order_id int;
 ALTER TABLE supplier_orders_transaction ADD CONSTRAINT fk_supplier_ordering_transaction FOREIGN KEY(supply_order_id) REFERENCES supplier_orders(supplier_order_id);
 
