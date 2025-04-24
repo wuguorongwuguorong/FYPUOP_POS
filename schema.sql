@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS supplier_orders_transaction(
   unit_price decimal(10,2) NOT NULL,
   received_quantity decimal(10,2) DEFAULT '0.00',
   status enum('pending','partially_received','completed', 'cancelled') DEFAULT 'pending',
+  note TEXT,
   supply_order_id int DEFAULT NULL,
   inv_item_id int DEFAULT NULL,
   supplier_id int DEFAULT NULL,

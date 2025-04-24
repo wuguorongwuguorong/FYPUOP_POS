@@ -786,23 +786,20 @@ async function main() {
   app.get('/supplier-orders/cancelled', async (req, res) => {
     try {
       const [cancelledOrders] = await connection.execute(`
-        SELECT 
-          sot.order_item_id,
-          sot.desc_item,
-          sot.quantity,
-          sot.unit_price,
-          so.supply_order_id,
-          so.notes,
-          so.updated_at AS cancelled_at,
-          su.supplier_name,
-          sh.shop_name
-        FROM supplier_orders_transaction sot
-        JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
-        JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
-        JOIN suppliers su ON ss.supplier_id = su.supplier_id
-        JOIN shops sh ON ss.shop_id = sh.shop_id
-        WHERE sot.status = 'cancelled'
-        ORDER BY so.updated_at DESC
+      SELECT 
+      su.supplier_name,
+      sot.desc_item,
+      sot.quantity,
+      sot.unit_price,
+      (sot.quantity * sot.unit_price) AS subtotal,
+      sot.notes,
+      sot.status,
+      so.updated_at AS cancelled_at
+      FROM supplier_orders_transaction sot
+      JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+      JOIN shop_suppliers ss ON so.shop_supplier_id = ss.shop_supplier_id
+      JOIN suppliers su ON ss.supplier_id = su.supplier_id
+      WHERE sot.status = 'cancelled';
       `);
 
       res.render('supplier_orders_cancellation', { cancelledOrders });
