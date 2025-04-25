@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS customers (
     email VARCHAR(100) UNIQUE NOT NULL,
     phone VARCHAR(20),
     rewards_points INT DEFAULT 0,
+    password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -171,13 +172,14 @@ CREATE TABLE IF NOT EXISTS recipes (
 CREATE TABLE IF NOT EXISTS order_cart (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     quantity INT NOT NULL DEFAULT 1,
-    unit_price DECIMAL(10,2) NOT NULL,
     special_instructions TEXT ,
-    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE
+    rating INT DEFAULT NULL,
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
+    FOREIGN KEY (shop_id) REFERENCES shops(shops_id) ON DELETE CASCADE
 )engine = innodb;
 
 
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS order_transaction (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
@@ -191,7 +193,6 @@ CREATE TABLE IF NOT EXISTS orders (
     points_redeemed INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE,
     FOREIGN KEY (customer_id) REFERENCES suppliers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE
 )engine = innodb;
@@ -233,11 +234,11 @@ ALTER TABLE recipes_ing ADD CONSTRAINT fk_recipes_item FOREIGN KEY(recipe_id) RE
 
 ALTER TABLE order_cart ADD COLUMN menu_item_id int;
 ALTER TABLE order_cart ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
+ALTER TABLE order_cart ADD COLUMN shop_id int;
+ALTER TABLE order_cart ADD CONSTRAINT fk_shop_orders FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 
-ALTER TABLE orders ADD COLUMN shop_id int;
-ALTER TABLE orders ADD COLUMN order_item_id int;
+ALTER TABLE order ADD COLUMN order_item_id int;
 ALTER TABLE orders ADD COLUMN customer_id int;
-ALTER TABLE orders ADD CONSTRAINT fk_shop_order FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
 ALTER TABLE orders ADD CONSTRAINT fk_cust_order FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
 ALTER TABLE orders ADD CONSTRAINT fk_cust_order_item FOREIGN KEY(order_item_id) REFERENCES order_cart(order_item_id);
 

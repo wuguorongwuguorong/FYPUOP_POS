@@ -1,0 +1,31 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+<h2 class="mt-4 mb-3">Customers Overview</h2>
+
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>User Name</th>
+      <th>Email</th>
+      <th>Phone</th>
+      <th>Rewards Points</th>
+      <th>Members Since</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each customers}}
+    <tr>
+      <td>{{this.User_name}}</td>
+      <td>{{this.email}}</td>
+      <td>{{this.phone}}</td>
+      <td>{{this.rewards_points}}</td>
+      <td>{{formatDate this.created_at}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+{{/block}}
+
+{{/extends}}

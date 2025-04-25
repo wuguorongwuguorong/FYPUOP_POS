@@ -988,6 +988,7 @@ async function main() {
       res.status(500).send('Server error');
     }
   });
+//****** All recipes ends here*****//
 
 
 
@@ -1238,6 +1239,30 @@ async function main() {
   });
   //*****EMployees section ends here ******
 
+
+//***** ALL customers route starts here*****//
+// GET Route for Customers List
+app.get('/customers', async (req, res) => {
+  try {
+    const [customers] = await connection.execute(`
+      SELECT 
+        customer_id,
+        User_name,
+        email,
+        phone,
+        rewards_points,
+        created_at,
+        updated_at
+      FROM customers
+      ORDER BY created_at DESC
+    `);
+
+    res.render('customers_list', { customers });
+  } catch (err) {
+    console.error('❌ Failed to load customers:', err);
+    res.status(500).send('Server error');
+  }
+});
 
 
 
