@@ -197,6 +197,13 @@ CREATE TABLE IF NOT EXISTS order_transaction (
     FOREIGN KEY (order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE
 )engine = innodb;
 
+CREATE TABLE IF NOT EXISTS order_transaction_items(
+trans_item_id INT AUTO_INCREMENT PRIMARY KEY
+) ENGINE=InnoDB;
+Alter TABLE order_transaction_items ADD COLUMN order_item_id INT;
+ALTER TABLE order_transaction_items ADD CONSTRAINT fk_order_ordered_item FOREIGN KEY(order_item_id) REFERENCES order_cart(order_item_id);
+Alter TABLE order_transaction_items ADD COLUMN order_id INT;
+ALTER TABLE order_transaction_items ADD CONSTRAINT fk_order_ordered_transaction FOREIGN KEY(order_id) REFERENCES order_transaction(order_id);
 
 CREATE TABLE IF NOT EXISTS customer_transactions (
     transaction_id INT AUTO_INCREMENT PRIMARY KEY,
