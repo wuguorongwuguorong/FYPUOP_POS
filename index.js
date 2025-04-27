@@ -1264,6 +1264,39 @@ app.get('/customers', async (req, res) => {
   }
 });
 
+//***** Employees ends here*****//
+
+
+//*****Ordering starts here*****/
+// GET route to show completed orders with subtotal, tax, and total
+app.get('/orders/completed/summary', async (req, res) => {
+  try {
+    const [completedOrders] = await connection.execute(`
+      SELECT 
+        ot.order_id,
+        ot.order_date,
+        c.User_name AS customer_name,
+        mi.menu_item_name,
+        mi.menu_item_price,
+        oc.quantity,
+        (mi.menu_item_price * oc.quantity) AS subtotal,
+        (mi.menu_item_price * oc.quantity * 0.09) AS tax,
+        (mi.menu_item_price * oc.quantity * 1.09) AS total
+      FROM order_transaction ot
+      JOIN order_transaction_items oti ON ot.order_id = oti.order_id
+      JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
+      JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
+      JOIN customers c ON ot.customer_id = c.customer_id
+      WHERE ot.status = 'completed'
+      ORDER BY ot.order_date DESC
+    `);
+
+    res.render('orders_completed_summary', { completedOrders });
+  } catch (err) {
+    console.error("❌ Failed to fetch completed orders summary:", err);
+    res.status(500).send('Server error');
+  }
+});
 
 
 }//end

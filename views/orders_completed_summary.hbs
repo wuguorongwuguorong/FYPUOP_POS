@@ -1,0 +1,46 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+
+<h2 class="mt-4 mb-3">Completed Orders Summary</h2>
+
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Order ID</th>
+      <th>Order Date</th>
+      <th>Customer</th>
+      <th>Item</th>
+      <th>Unit Price</th>
+      <th>Quantity</th>
+      <th>Subtotal</th>
+      <th>Tax (9%)</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each completedOrders}}
+    <tr>
+       <td>{{this.order_id}}</td>
+      <td>{{formatDate this.order_date}}</td>
+      <td>{{this.customer_name}}</td>
+      <td>{{this.menu_item_name}}</td>
+      <td>${{this.menu_item_price}}</td>
+      <td>{{this.quantity}}</td>
+      <td>${{multiply this.menu_item_price this.quantity}}</td>
+      <td>
+        ${{multiply (multiply this.menu_item_price this.quantity) 0.09}}
+      </td>
+      <td>
+        ${{addTax (multiply this.menu_item_price this.quantity) 0.09}}
+      </td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+<a href="/" class="btn btn-secondary mt-3">← Back to Main Menu</a>
+
+{{/block}}
+
+{{/extends}}
