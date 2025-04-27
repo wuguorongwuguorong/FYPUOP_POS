@@ -250,11 +250,11 @@ async function main() {
       ii.inv_item_name,
       s.shop_name,
       so.supply_order_id,
-      soi.desc_item
+      sot.desc_item
     FROM inventory_transactions it
     JOIN inventory_items ii ON it.inv_item_id = ii.inv_item_id
     LEFT JOIN shops s ON ii.shop_id = s.shop_id
-    LEFT JOIN supplier_order_items soi ON soi.inv_item_id = ii.inv_item_id
+    LEFT JOIN supplier_orders_transaction sot ON soi.inv_item_id = ii.inv_item_id
     LEFT JOIN supplier_orders so ON soi.supply_order_id = so.supply_order_id
   `;
 
@@ -360,6 +360,74 @@ async function main() {
       res.status(500).send("Server error");
     }
   });
+
+  // Update inventory when customer sale is completed
+app.post('/inventory/transactions/sales', async (req, res) => {
+  const { order_id } = req.body;
+
+  try {
+    const [orderItems] = await connection.execute(`
+      SELECT 
+        oci.order_item_id,
+        oci.quantity AS ordered_qty,
+        mi.menu_item_id
+      FROM order_transaction_items oti
+      JOIN order_cart oci ON oti.order_item_id = oci.order_item_id
+      JOIN menu_items mi ON oci.menu_item_id = mi.menu_item_id
+      WHERE oti.order_id = ?
+    `, [order_id]);
+
+    for (const item of orderItems) {
+      // Get the recipes linked to the menu item
+      const [recipes] = await connection.execute(`
+        SELECT r.inv_item_id, r.quantity AS recipe_qty, r.rec_ing_uom
+        FROM recipes r
+        WHERE r.menu_item_id = ?
+      `, [item.menu_item_id]);
+
+      for (const recipe of recipes) {
+        // Fetch the inventory unit type
+        const [[inventory]] = await connection.execute(`
+          SELECT inv_item_unit, inv_item_current_quantity
+          FROM inventory_items
+          WHERE inv_item_id = ?
+        `, [recipe.inv_item_id]);
+
+        if (!inventory) continue;  // skip if inventory item not found
+
+        let quantityUsedInInventoryUnit = recipe.recipe_qty * item.ordered_qty;
+
+        if (recipe.rec_ing_uom === 'grams' && inventory.inv_item_unit === 'kg') {
+          // Convert inventory kg to grams for deduction
+          quantityUsedInInventoryUnit = quantityUsedInInventoryUnit / 1000;
+        }
+
+        if (recipe.inv_item_id && quantityUsedInInventoryUnit > 0) {
+          // Update inventory
+          await connection.execute(`
+            UPDATE inventory_items
+            SET inv_item_current_quantity = inv_item_current_quantity - ?
+            WHERE inv_item_id = ?
+          `, [quantityUsedInInventoryUnit, recipe.inv_item_id]);
+
+          // Insert into inventory_transactions
+          await connection.execute(`
+            INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+            VALUES (?, ?, 'sale', ?)
+          `, [recipe.inv_item_id, -quantityUsedInInventoryUnit, `Sold via Order ID: ${order_id}`]);
+        }
+      }
+    }
+
+    res.redirect('/inventory');
+  } catch (err) {
+    console.error("❌ Failed to apply sales inventory transaction:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+
+
   //***** All inventory ends here*****/
 
 
@@ -518,6 +586,83 @@ async function main() {
       res.status(500).send('Server error');
     }
   });
+
+  // POST route to mark order as completed and update inventory
+app.post('/orders/:orderId/complete', async (req, res) => {
+  const orderId = req.params.orderId;
+
+  try {
+    console.log(`🛒 Completing Order ID: ${orderId}...`);
+
+    // 1. Update the order status to completed
+    await connection.execute(`
+      UPDATE order_transaction
+      SET status = 'completed', payment_status = 'paid'
+      WHERE order_id = ?
+    `, [orderId]);
+
+    console.log(`✅ Order status updated to completed.`);
+
+    // 2. Find all ordered menu items from this order
+    const [items] = await connection.execute(`
+      SELECT oc.menu_item_id, oc.quantity
+      FROM order_transaction_items oti
+      JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
+      WHERE oti.order_id = ?
+    `, [orderId]);
+
+    console.log(`📦 Found ${items.length} ordered items linked to the order.`);
+
+    // 3. For each menu item, fetch the recipe and update inventory
+    for (const item of items) {
+      const menuItemId = item.menu_item_id;
+      const quantitySold = item.quantity;
+
+      console.log(`🔍 Processing Menu Item ID: ${menuItemId} (Quantity Sold: ${quantitySold})`);
+
+      const [ingredients] = await connection.execute(`
+        SELECT r.inv_item_id, r.quantity AS ingredient_qty, r.rec_ing_uom
+        FROM recipes r
+        WHERE r.menu_item_id = ?
+      `, [menuItemId]);
+
+      console.log(`Found ${ingredients.length} ingredients for Menu Item ID: ${menuItemId}`);
+
+      for (const ingredient of ingredients) {
+        let qtyToDeduct = ingredient.ingredient_qty * quantitySold;
+
+        // Convert grams to kg if needed
+        if (ingredient.rec_ing_uom === 'grams') {
+          qtyToDeduct = qtyToDeduct / 1000;
+        }
+
+        console.log(`Deducting ${qtyToDeduct} kg of inventory for Inventory Item ID: ${ingredient.inv_item_id}`);
+
+        // 4. Update the inventory
+        await connection.execute(`
+          UPDATE inventory_items
+          SET inv_item_current_quantity = inv_item_current_quantity - ?
+          WHERE inv_item_id = ?
+        `, [qtyToDeduct, ingredient.inv_item_id]);
+
+        // 5. Insert into inventory_transactions
+        await connection.execute(`
+          INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
+          VALUES (?, ?, 'sale', ?)
+        `, [ingredient.inv_item_id, -qtyToDeduct, `Deducted after sale Order ID: ${orderId}`]);
+
+        console.log(`📝 Inventory transaction logged for Inventory Item ID: ${ingredient.inv_item_id}`);
+      }
+    }
+
+    res.redirect('/inventory');
+  } catch (err) {
+    console.error("❌ Failed to complete order and update inventory:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+  
   // *****ALL Suppliers ONLY stops here*****
 
 
