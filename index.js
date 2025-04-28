@@ -79,7 +79,7 @@ async function main() {
 
   });
 
-//***** ALL Menu route starts here*****//
+  //***** ALL Menu route starts here*****//
   //see all menu
   app.get('/menu', async function (req, res) {
     const [menuItems] = await connection.execute("SELECT * FROM menu_items")
@@ -181,11 +181,11 @@ async function main() {
       res.status(500).send('Error deleting menu item');
     }
   });
-//***** ALL menu route ends here*****//
+  //***** ALL menu route ends here*****//
 
 
 
-//ALL Inventory route starts here*****//
+  //ALL Inventory route starts here*****//
   // View inventory items with shop name
   app.get('/inventory', async function (req, res) {
     try {
@@ -367,11 +367,11 @@ async function main() {
   });
 
   // Update inventory when customer sale is completed(testing route, removed once front end is completed)
-app.post('/inventory/transactions/sales', async (req, res) => {
-  const { order_id } = req.body;
+  app.post('/inventory/transactions/sales', async (req, res) => {
+    const { order_id } = req.body;
 
-  try {
-    const [orderItems] = await connection.execute(`
+    try {
+      const [orderItems] = await connection.execute(`
       SELECT 
         oci.order_item_id,
         oci.quantity AS ordered_qty,
@@ -382,54 +382,54 @@ app.post('/inventory/transactions/sales', async (req, res) => {
       WHERE oti.order_id = ?
     `, [order_id]);
 
-    for (const item of orderItems) {
-      // Get the recipes linked to the menu item
-      const [recipes] = await connection.execute(`
+      for (const item of orderItems) {
+        // Get the recipes linked to the menu item
+        const [recipes] = await connection.execute(`
         SELECT r.inv_item_id, r.quantity AS recipe_qty, r.rec_ing_uom
         FROM recipes r
         WHERE r.menu_item_id = ?
       `, [item.menu_item_id]);
 
-      for (const recipe of recipes) {
-        // Fetch the inventory unit type
-        const [[inventory]] = await connection.execute(`
+        for (const recipe of recipes) {
+          // Fetch the inventory unit type
+          const [[inventory]] = await connection.execute(`
           SELECT inv_item_unit, inv_item_current_quantity
           FROM inventory_items
           WHERE inv_item_id = ?
         `, [recipe.inv_item_id]);
 
-        if (!inventory) continue;  // skip if inventory item not found
+          if (!inventory) continue;  // skip if inventory item not found
 
-        let quantityUsedInInventoryUnit = recipe.recipe_qty * item.ordered_qty;
+          let quantityUsedInInventoryUnit = recipe.recipe_qty * item.ordered_qty;
 
-        if (recipe.rec_ing_uom === 'grams' && inventory.inv_item_unit === 'kg') {
-          // Convert inventory kg to grams for deduction
-          quantityUsedInInventoryUnit = quantityUsedInInventoryUnit / 1000;
-        }
+          if (recipe.rec_ing_uom === 'grams' && inventory.inv_item_unit === 'kg') {
+            // Convert inventory kg to grams for deduction
+            quantityUsedInInventoryUnit = quantityUsedInInventoryUnit / 1000;
+          }
 
-        if (recipe.inv_item_id && quantityUsedInInventoryUnit > 0) {
-          // Update inventory
-          await connection.execute(`
+          if (recipe.inv_item_id && quantityUsedInInventoryUnit > 0) {
+            // Update inventory
+            await connection.execute(`
             UPDATE inventory_items
             SET inv_item_current_quantity = inv_item_current_quantity - ?
             WHERE inv_item_id = ?
           `, [quantityUsedInInventoryUnit, recipe.inv_item_id]);
 
-          // Insert into inventory_transactions
-          await connection.execute(`
+            // Insert into inventory_transactions
+            await connection.execute(`
             INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
             VALUES (?, ?, 'sale', ?)
           `, [recipe.inv_item_id, -quantityUsedInInventoryUnit, `Sold via Order ID: ${order_id}`]);
+          }
         }
       }
-    }
 
-    res.redirect('/inventory');
-  } catch (err) {
-    console.error("❌ Failed to apply sales inventory transaction:", err);
-    res.status(500).send("Server error");
-  }
-});
+      res.redirect('/inventory');
+    } catch (err) {
+      console.error("❌ Failed to apply sales inventory transaction:", err);
+      res.status(500).send("Server error");
+    }
+  });
 
   //***** All inventory ends here*****/
 
@@ -904,7 +904,7 @@ app.post('/inventory/transactions/sales', async (req, res) => {
         const [[row]] = await connection.execute(
           `SELECT quantity
           FROM supplier_orders_transaction
-          WHERE order_item_id = ? `, 
+          WHERE order_item_id = ? `,
           [itemId]
         );
 
@@ -941,7 +941,7 @@ app.post('/inventory/transactions/sales', async (req, res) => {
           await connection.execute(
             `INSERT INTO inventory_transactions(inv_item_id, qty_change, transaction_type, notes)
              VALUES(?, ?, 'replenish', ?)`,
-            [invItemId, actualReceived, `Replenished from supplier order item ID: ${ itemId }`]
+            [invItemId, actualReceived, `Replenished from supplier order item ID: ${itemId}`]
           );
         }
 
@@ -1059,7 +1059,7 @@ app.post('/inventory/transactions/sales', async (req, res) => {
       res.status(500).send('Server error');
     }
   });
-//****** All recipes ends here*****//
+  //****** All recipes ends here*****//
 
 
 
@@ -1292,7 +1292,7 @@ app.post('/inventory/transactions/sales', async (req, res) => {
           SUM(ec.total_hours) AS total_hours
       FROM employee_clocking ec
       JOIN employees e ON ec.emp_id = e.emp_id
-      ${ whereClause }
+      ${whereClause}
       GROUP BY e.emp_name, ec.clocking_date
       ORDER BY ec.clocking_date ASC`,
         params
@@ -1311,11 +1311,11 @@ app.post('/inventory/transactions/sales', async (req, res) => {
   //*****EMployees section ends here ******
 
 
-//***** ALL customers route starts here*****//
-// GET Route for Customers List
-app.get('/customers', async (req, res) => {
-  try {
-    const [customers] = await connection.execute(`
+  //***** ALL customers route starts here*****//
+  // GET Route for Customers List
+  app.get('/customers', async (req, res) => {
+    try {
+      const [customers] = await connection.execute(`
       SELECT 
         customer_id,
         User_name,
@@ -1328,21 +1328,21 @@ app.get('/customers', async (req, res) => {
       ORDER BY created_at DESC
     `);
 
-    res.render('customers_list', { customers });
-  } catch (err) {
-    console.error('❌ Failed to load customers:', err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('customers_list', { customers });
+    } catch (err) {
+      console.error('❌ Failed to load customers:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
-//***** ALL Customers ends here*****//
+  //***** ALL Customers ends here*****//
 
 
-//*****Ordering starts here*****/
-// GET route to show completed orders with subtotal, tax, and total
-app.get('/orders/completed/summary', async (req, res) => {
-  try {
-    const [completedOrders] = await connection.execute(`
+  //*****Ordering starts here*****/
+  // GET route to show completed orders with subtotal, tax, and total
+  app.get('/orders/completed/summary', async (req, res) => {
+    try {
+      const [completedOrders] = await connection.execute(`
       SELECT 
         ot.order_id,
         ot.order_date,
@@ -1362,147 +1362,209 @@ app.get('/orders/completed/summary', async (req, res) => {
       ORDER BY ot.order_date DESC
     `);
 
-    res.render('orders_completed_summary', { completedOrders });
-  } catch (err) {
-    console.error("❌ Failed to fetch completed orders summary:", err);
-    res.status(500).send('Server error');
-  }
-});
+      res.render('orders_completed_summary', { completedOrders });
+    } catch (err) {
+      console.error("❌ Failed to fetch completed orders summary:", err);
+      res.status(500).send('Server error');
+    }
+  });
 
- // POST route to mark order as completed and update inventory
- // Fake payment complete + auto inventory deduction (simulate payment success)
-app.post('/orders/:orderId/complete-payment', async (req, res) => {
-  const orderId = req.params.orderId;
+  // POST route to mark order as completed and update inventory
+  // Fake payment complete + auto inventory deduction (simulate payment success)
+  app.post('/orders/:orderId/complete-payment', async (req, res) => {
+    const orderId = req.params.orderId;
 
-  try {
-    console.log(`✅ Simulating payment complete for order ${orderId}`);
+    try {
+      console.log(`✅ Simulating payment complete for order ${orderId}`);
 
-    // 1. Update order_transaction to 'completed'
-    await connection.execute(`
+      // 1. Update order_transaction to 'completed'
+      await connection.execute(`
       UPDATE order_transaction
       SET status = 'completed'
       WHERE order_id = ?
     `, [orderId]);
 
-    console.log(`✅ Order ${orderId} marked as completed.`);
+      console.log(`✅ Order ${orderId} marked as completed.`);
 
-    // 2. Get all items linked to the order
-    const [orderItems] = await connection.execute(`
+      // 2. Get all items linked to the order
+      const [orderItems] = await connection.execute(`
       SELECT oc.order_item_id, oc.quantity, oc.menu_item_id
       FROM order_transaction_items oti
       JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
       WHERE oti.order_id = ?
     `, [orderId]);
 
-    console.log(`🔍 Fetched ${orderItems.length} ordered items.`);
+      console.log(`🔍 Fetched ${orderItems.length} ordered items.`);
 
-    // 3. For each menu item, find recipes and deduct ingredients
-    for (let item of orderItems) {
-      const { quantity: saleQuantity, menu_item_id } = item;
+      // 3. For each menu item, find recipes and deduct ingredients
+      for (let item of orderItems) {
+        const { quantity: saleQuantity, menu_item_id } = item;
 
-      const [recipes] = await connection.execute(`
+        const [recipes] = await connection.execute(`
         SELECT r.inv_item_id, r.quantity, r.rec_ing_uom
         FROM recipes r
         WHERE r.menu_item_id = ?
       `, [menu_item_id]);
 
-      console.log(`🔍 Found ${recipes.length} recipes for menu_item_id: ${menu_item_id}`);
+        console.log(`🔍 Found ${recipes.length} recipes for menu_item_id: ${menu_item_id}`);
 
-      for (let recipe of recipes) {
-        const { inv_item_id, quantity: recipeQty, rec_ing_uom } = recipe;
+        for (let recipe of recipes) {
+          const { inv_item_id, quantity: recipeQty, rec_ing_uom } = recipe;
 
-        let usedQuantity = saleQuantity * recipeQty;
+          let usedQuantity = saleQuantity * recipeQty;
 
-        if (rec_ing_uom === 'grams') {
-          usedQuantity = usedQuantity / 1000; // convert grams to kilograms
-        }
-        console.log(`📦 Deducting ${usedQuantity} kg from inventory item ${inv_item_id}`);
+          if (rec_ing_uom === 'grams') {
+            usedQuantity = usedQuantity / 1000; // convert grams to kilograms
+          }
+          console.log(`📦 Deducting ${usedQuantity} kg from inventory item ${inv_item_id}`);
 
-        // Deduct from inventory
-        await connection.execute(`
+          // Deduct from inventory
+          await connection.execute(`
           UPDATE inventory_items
           SET inv_item_current_quantity = inv_item_current_quantity - ?
           WHERE inv_item_id = ?
         `, [usedQuantity, inv_item_id]);
 
-        // Insert inventory transaction log
-        await connection.execute(`
+          // Insert inventory transaction log
+          await connection.execute(`
           INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
           VALUES (?, ?, 'sale', ?)
         `, [inv_item_id, -usedQuantity, `Auto deduction from completed order ID ${orderId}`]);
+        }
       }
+
+      res.redirect('/orders_completed_summary');
+    } catch (err) {
+      console.error("❌ Failed during payment completion and inventory deduction:", err);
+      res.status(500).send('Server error');
     }
+  });
 
-    res.redirect('/orders_completed_summary');
-  } catch (err) {
-    console.error("❌ Failed during payment completion and inventory deduction:", err);
-    res.status(500).send('Server error');
-  }
-});
+  // POST route to update inventory after completed order
+  app.post('/orders/:orderId/update-inventory', async (req, res) => {
+    const orderId = req.params.orderId;
 
-// POST route to update inventory after completed order
-app.post('/orders/:orderId/update-inventory', async (req, res) => {
-  const orderId = req.params.orderId;
+    try {
+      console.log(`🛒 Triggering inventory update for completed order ID: ${orderId}`);
 
-  try {
-    console.log(`🛒 Triggering inventory update for completed order ID: ${orderId}`);
-
-    // 1️⃣ Fetch all menu items from the order
-    const [orderItems] = await connection.execute(`
+      // 1️⃣ Fetch all menu items from the order
+      const [orderItems] = await connection.execute(`
       SELECT oc.menu_item_id, oc.quantity
       FROM order_transaction_items oti
       JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
       WHERE oti.order_id = ?
     `, [orderId]);
 
-    for (const item of orderItems) {
-      const menuItemId = item.menu_item_id;
-      const orderedQty = item.quantity;
+      for (const item of orderItems) {
+        const menuItemId = item.menu_item_id;
+        const orderedQty = item.quantity;
 
-      // 2️⃣ Fetch ingredients (recipes) for the menu item
-      const [recipes] = await connection.execute(`
+        // 2️⃣ Fetch ingredients (recipes) for the menu item
+        const [recipes] = await connection.execute(`
         SELECT inv_item_id, quantity, rec_ing_uom
         FROM recipes
         WHERE menu_item_id = ?
       `, [menuItemId]);
 
-      for (const recipe of recipes) {
-        const invItemId = recipe.inv_item_id;
-        const recipeQtyPerItem = recipe.quantity;
-        const unit = recipe.rec_ing_uom;
+        for (const recipe of recipes) {
+          const invItemId = recipe.inv_item_id;
+          const recipeQtyPerItem = recipe.quantity;
+          const unit = recipe.rec_ing_uom;
 
-        if (!invItemId) continue; // skip if no ingredient linked
+          if (!invItemId) continue; // skip if no ingredient linked
 
-        let totalQtyToDeduct = recipeQtyPerItem * orderedQty;
+          let totalQtyToDeduct = recipeQtyPerItem * orderedQty;
 
-        // 3️⃣ Convert if unit is grams (inventory is in kg)
-        if (unit === 'grams') {
-          totalQtyToDeduct = totalQtyToDeduct / 1000; // grams ➔ kg
-        }
+          // 3️⃣ Convert if unit is grams (inventory is in kg)
+          if (unit === 'grams') {
+            totalQtyToDeduct = totalQtyToDeduct / 1000; // grams ➔ kg
+          }
 
-        console.log(`🔻 Deduct ${totalQtyToDeduct}kg from inventory item ID ${invItemId}`);
+          console.log(`🔻 Deduct ${totalQtyToDeduct}kg from inventory item ID ${invItemId}`);
 
-        // 4️⃣ Update inventory
-        await connection.execute(`
+          // 4️⃣ Update inventory
+          await connection.execute(`
           UPDATE inventory_items
           SET inv_item_current_quantity = inv_item_current_quantity - ?
           WHERE inv_item_id = ?
         `, [totalQtyToDeduct, invItemId]);
 
-        // 5️⃣ Log into inventory_transactions
-        await connection.execute(`
+          // 5️⃣ Log into inventory_transactions
+          await connection.execute(`
           INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
           VALUES (?, ?, 'sale', ?)
         `, [invItemId, -totalQtyToDeduct, `Deducted after sales order ID: ${orderId}`]);
+        }
       }
-    }
 
-    res.redirect('/orders/completed/summary'); // 👈 Redirect back after update!
-  } catch (err) {
-    console.error('❌ Failed to update inventory after sales:', err);
-    res.status(500).send('Server error');
-  }
-});
+      res.redirect('/orders/completed/summary'); // 👈 Redirect back after update!
+    } catch (err) {
+      console.error('❌ Failed to update inventory after sales:', err);
+      res.status(500).send('Server error');
+    }
+  });
+  // Orders route ends here****//
+
+
+
+  //***** Shop overview route starts here *****//
+  app.get('/shop-overview', async (req, res) => {
+    try {
+      // 1️⃣ Calculate Employees Wages
+      const [employeeWages] = await connection.execute(`
+      SELECT 
+        SUM(CASE 
+          WHEN er.hourly_rate IS NULL THEN er.monthly_rate  -- Full timers
+          ELSE ec.total_hours * er.hourly_rate              -- Part timers
+        END) AS total_wages
+      FROM employees e
+      JOIN employees_role er ON e.emp_role_id = er.emp_role_id
+      LEFT JOIN (
+        SELECT emp_id, SUM(total_hours) AS total_hours
+        FROM employee_clocking
+        WHERE status = 'clocked_out'
+        GROUP BY emp_id
+      ) ec ON e.emp_id = ec.emp_id
+    `);
+
+      const totalWages = parseFloat(employeeWages[0]?.total_wages) || 0;
+
+
+      // 2️⃣ Calculate Supplier Order Costs
+      const [supplierCosts] = await connection.execute(`
+      SELECT 
+        SUM((sot.quantity * sot.unit_price) * 1.09) AS total_supplier_cost
+      FROM supplier_orders_transaction sot
+      JOIN supplier_orders so ON sot.supply_order_id = so.supply_order_id
+      WHERE sot.status = 'completed'
+    `);
+
+      const totalSupplierCost = parseFloat(supplierCosts[0]?.total_supplier_cost) || 0;
+
+      // 3️⃣ Calculate Total Sales Revenue
+      const [salesRevenue] = await connection.execute(`
+      SELECT 
+        SUM((mi.menu_item_price * oc.quantity) * 1.09) AS total_revenue
+      FROM order_transaction ot
+      JOIN order_transaction_items oti ON ot.order_id = oti.order_id
+      JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
+      JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
+      WHERE ot.status = 'completed'
+    `);
+
+      const totalRevenue = parseFloat(salesRevenue[0]?.total_revenue) || 0;
+
+      res.render('shop_overview', {
+        totalWages: totalWages.toFixed(2),
+        totalSupplierCost: totalSupplierCost.toFixed(2),
+        totalRevenue: totalRevenue.toFixed(2)
+      });
+    } catch (err) {
+      console.error("❌ Failed to load shop overview:", err);
+      res.status(500).send('Server error');
+    }
+  });
+
 
 
 

@@ -1,0 +1,35 @@
+{{#extends "base"}}
+
+{{#block "content"}}
+
+<h2 class="mt-4 mb-4">🛒 Shop Overview</h2>
+
+<!-- 1️⃣ Employees Overhead -->
+<div class="card mb-4">
+  <div class="card-header">👨‍💼 Employees Overhead</div>
+  <div class="card-body">
+    <h4>Total Wages: ${{totalWages}}</h4>
+  </div>
+</div>
+
+<!-- 2️⃣ Supplier Ordering Cost -->
+<div class="card mb-4">
+  <div class="card-header">📦 Supplier Ordering Cost</div>
+  <div class="card-body">
+    <h4>Total Supplier Costs: ${{totalSupplierCost}}</h4>
+  </div>
+</div>
+
+<!-- 3️⃣ Sales Revenue -->
+<div class="card mb-4">
+  <div class="card-header">💵 Total Sales Revenue</div>
+  <div class="card-body">
+    <h4>Total Revenue: ${{totalRevenue}}</h4>
+  </div>
+</div>
+
+<a href="/" class="btn btn-secondary">← Back to Main</a>
+
+{{/block}}
+
+{{/extends}}
