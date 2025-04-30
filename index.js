@@ -94,7 +94,7 @@ const upload = multer({ storage: storage });
   //add new menu into database and display in a new page
   app.get('/menu/create', async function (req, res) {
     const [menuItems] = await pool.execute("SELECT * FROM menu_items");
-    const [shops] = await connection.execute("SELECT * FROM shops");
+    const [shops] = await pool.execute("SELECT * FROM shops");
     res.render('create_menu', {
       "allMenu": menuItems,
       "shops": shops
@@ -191,7 +191,7 @@ const upload = multer({ storage: storage });
   // View inventory items with shop name
   app.get('/inventory', async function (req, res) {
     try {
-      const [inventory] = await connection.execute(`
+      const [inventory] = await pool.execute(`
       SELECT 
         i.*, 
         s.shop_name 
@@ -211,7 +211,7 @@ const upload = multer({ storage: storage });
   //GET route for create
   app.get('/inventory/create', async (req, res) => {
     try {
-      const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+      const [shops] = await pool.execute('SELECT shop_id, shop_name FROM shops');
       res.render('inventory_create', { shops });
     } catch (err) {
       console.error("❌ Failed to load inventory creation form:", err);
@@ -230,7 +230,7 @@ const upload = multer({ storage: storage });
     } = req.body;
 
     try {
-      await connection.execute(`
+      await pool.execute(`
       INSERT INTO inventory_items 
         (inv_item_name, inv_item_unit, inv_item_current_quantity, inv_item_reorder_level, shop_id)
       VALUES (?, ?, ?, ?, ?)
@@ -274,7 +274,7 @@ const upload = multer({ storage: storage });
     query += ' ORDER BY it.created_at DESC';
 
     try {
-      const [transactions] = await connection.execute(query, params);
+      const [transactions] = await pool.execute(query, params);
       res.render('inventory_transactions', { transactions, filterType: type });
     } catch (err) {
       console.error("❌ Failed to fetch inventory transactions:", err);
@@ -287,7 +287,7 @@ const upload = multer({ storage: storage });
     const { inv_item_id, qty_change, transaction_type, notes } = req.body;
 
     try {
-      await connection.execute(
+      await pool.execute(
         `INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
        VALUES (?, ?, ?, ?)`,
         [inv_item_id, qty_change, transaction_type, notes]
@@ -295,12 +295,12 @@ const upload = multer({ storage: storage });
 
       // Optionally update inventory item quantity if needed
       if (transaction_type === 'replenish') {
-        await connection.execute(
+        await pool.execute(
           `UPDATE inventory_items SET inv_item_current_quantity = inv_item_current_quantity + ? WHERE inv_item_id = ?`,
           [qty_change, inv_item_id]
         );
       } else if (transaction_type === 'sale' || transaction_type === 'waste') {
-        await connection.execute(
+        await pool.execute(
           `UPDATE inventory_items SET inv_item_current_quantity = inv_item_current_quantity - ? WHERE inv_item_id = ?`,
           [qty_change, inv_item_id]
         );
@@ -317,12 +317,12 @@ const upload = multer({ storage: storage });
     const invItemId = req.params.invItemId;
 
     try {
-      const [[item]] = await connection.execute(`
+      const [[item]] = await pool.execute(`
         SELECT inv_item_id, inv_item_name, inv_item_current_quantity 
         FROM inventory_items 
         WHERE inv_item_id = ?`, [invItemId]);
 
-      const [completedOrders] = await connection.execute(`
+      const [completedOrders] = await pool.execute(`
         SELECT soi.order_item_id, soi.desc_item, soi.quantity, soi.unit_price, so.supply_order_date
         FROM supplier_orders_transaction soi
         JOIN supplier_orders so ON soi.supply_order_id = so.supply_order_id
@@ -349,14 +349,14 @@ const upload = multer({ storage: storage });
       }
 
       // Update inventory item quantity
-      await connection.execute(`
+      await pool.execute(`
         UPDATE inventory_items 
         SET inv_item_current_quantity = inv_item_current_quantity + ?
         WHERE inv_item_id = ?
       `, [quantity, inv_item_id]);
 
       // Insert into inventory_transactions
-      await connection.execute(`
+      await pool.execute(`
         INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
         VALUES (?, ?, 'replenish', ?)
       `, [inv_item_id, quantity, `Updated from completed supplier order item ID: ${order_item_id}`]);
@@ -373,7 +373,7 @@ const upload = multer({ storage: storage });
     const { order_id } = req.body;
 
     try {
-      const [orderItems] = await connection.execute(`
+      const [orderItems] = await pool.execute(`
       SELECT 
         oci.order_item_id,
         oci.quantity AS ordered_qty,
@@ -386,7 +386,7 @@ const upload = multer({ storage: storage });
 
       for (const item of orderItems) {
         // Get the recipes linked to the menu item
-        const [recipes] = await connection.execute(`
+        const [recipes] = await pool.execute(`
         SELECT r.inv_item_id, r.quantity AS recipe_qty, r.rec_ing_uom
         FROM recipes r
         WHERE r.menu_item_id = ?
@@ -394,7 +394,7 @@ const upload = multer({ storage: storage });
 
         for (const recipe of recipes) {
           // Fetch the inventory unit type
-          const [[inventory]] = await connection.execute(`
+          const [[inventory]] = await pool.execute(`
           SELECT inv_item_unit, inv_item_current_quantity
           FROM inventory_items
           WHERE inv_item_id = ?
@@ -411,14 +411,14 @@ const upload = multer({ storage: storage });
 
           if (recipe.inv_item_id && quantityUsedInInventoryUnit > 0) {
             // Update inventory
-            await connection.execute(`
+            await pool.execute(`
             UPDATE inventory_items
             SET inv_item_current_quantity = inv_item_current_quantity - ?
             WHERE inv_item_id = ?
           `, [quantityUsedInInventoryUnit, recipe.inv_item_id]);
 
             // Insert into inventory_transactions
-            await connection.execute(`
+            await pool.execute(`
             INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
             VALUES (?, ?, 'sale', ?)
           `, [recipe.inv_item_id, -quantityUsedInInventoryUnit, `Sold via Order ID: ${order_id}`]);
@@ -441,7 +441,7 @@ const upload = multer({ storage: storage });
   // GET Suppliers route
   app.get('/suppliers', async (req, res) => {
     try {
-      const [suppliers] = await connection.execute(`
+      const [suppliers] = await pool.execute(`
         SELECT 
           s.supplier_id, 
           s.supplier_name, 
@@ -469,7 +469,7 @@ const upload = multer({ storage: storage });
     const shopSupplierId = req.params.shopSupplierId;
 
     try {
-      await connection.execute(
+      await pool.execute(
         `UPDATE shop_suppliers 
        SET is_active = NOT is_active 
        WHERE shop_supplier_id = ?`,
@@ -487,7 +487,7 @@ const upload = multer({ storage: storage });
   app.get('/suppliers/create', async (req, res) => {
     try {
 
-      const [shops] = await connection.execute("SELECT shop_id FROM shops");
+      const [shops] = await pool.execute("SELECT shop_id FROM shops");
 
       res.render('suppliers_create', { shops });
     } catch (err) {
@@ -502,7 +502,7 @@ const upload = multer({ storage: storage });
 
     try {
       // Insert into suppliers table
-      const [supplierResult] = await connection.execute(
+      const [supplierResult] = await pool.execute(
         `INSERT INTO suppliers (supplier_name, supplier_contact_person, supplier_email)
          VALUES (?, ?, ?)`,
         [supplier_name, supplier_contact_person, supplier_email]
@@ -511,7 +511,7 @@ const upload = multer({ storage: storage });
       const newSupplierId = supplierResult.insertId;
 
       // Insert into shop_suppliers table
-      await connection.execute(
+      await pool.execute(
         `INSERT INTO shop_suppliers (shop_id, supplier_id, is_active)
          VALUES (?, ?, ?)`,
         [shop_id, newSupplierId, is_active === 'true' ? 1 : 0]
@@ -529,7 +529,7 @@ const upload = multer({ storage: storage });
     const supplierId = req.params.id;
 
     try {
-      const [rows] = await connection.execute(
+      const [rows] = await pool.execute(
         `SELECT s.*, ss.shop_id, ss.is_active
          FROM suppliers s
          LEFT JOIN shop_suppliers ss ON s.supplier_id = ss.supplier_id
@@ -541,7 +541,7 @@ const upload = multer({ storage: storage });
 
       const supplier = rows[0];
 
-      const [shops] = await connection.execute("SELECT shop_id FROM shops");
+      const [shops] = await pool.execute("SELECT shop_id FROM shops");
 
       res.render('suppliers_edit', { supplier, shops });
     } catch (err) {
@@ -557,7 +557,7 @@ const upload = multer({ storage: storage });
 
     try {
       // Update the suppliers table
-      await connection.execute(
+      await pool.execute(
         `UPDATE suppliers 
          SET supplier_name = ?, supplier_contact_person = ?, supplier_email = ?
          WHERE supplier_id = ?`,
@@ -565,20 +565,20 @@ const upload = multer({ storage: storage });
       );
 
       // Update or insert shop_suppliers entry
-      const [existing] = await connection.execute(
+      const [existing] = await pool.execute(
         `SELECT * FROM shop_suppliers WHERE supplier_id = ?`,
         [supplierId]
       );
 
       if (existing.length > 0) {
-        await connection.execute(
+        await pool.execute(
           `UPDATE shop_suppliers 
            SET shop_id = ?, is_active = ? 
            WHERE supplier_id = ?`,
           [shop_id, is_active === 'true' ? 1 : 0, supplierId]
         );
       } else {
-        await connection.execute(
+        await pool.execute(
           `INSERT INTO shop_suppliers (shop_id, supplier_id, is_active)
            VALUES (?, ?, ?)`,
           [shop_id, supplierId, is_active === 'true' ? 1 : 0]
@@ -601,7 +601,7 @@ const upload = multer({ storage: storage });
     const supplierId = req.params.id;
 
     try {
-      const [supplierRows] = await connection.execute(`
+      const [supplierRows] = await pool.execute(`
       SELECT 
         s.supplier_id,
         s.supplier_name,
@@ -620,7 +620,7 @@ const upload = multer({ storage: storage });
         return res.status(404).send('Supplier not found');
       }
 
-      const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+      const [shops] = await pool.execute('SELECT shop_id, shop_name FROM shops');
       const supplier = supplierRows[0];
       res.render('supplier_place_order', { supplier, shops });
     } catch (err) {
@@ -644,7 +644,7 @@ const upload = multer({ storage: storage });
     } = req.body;
 
     try {
-      const [shopSupplierRows] = await connection.execute(`
+      const [shopSupplierRows] = await pool.execute(`
       SELECT shop_supplier_id FROM shop_suppliers WHERE supplier_id = ? AND shop_id = ?
     `, [supplierId, shop_id]);
 
@@ -654,7 +654,7 @@ const upload = multer({ storage: storage });
 
       const shopSupplierId = shopSupplierRows[0].shop_supplier_id;
 
-      const [orderResult] = await connection.execute(`
+      const [orderResult] = await pool.execute(`
       INSERT INTO supplier_orders (shop_supplier_id, supply_total_amount, notes)
       VALUES (?, ?, ?)
     `, [shopSupplierId, supply_total_amount || 0, notes || null]);
@@ -664,7 +664,7 @@ const upload = multer({ storage: storage });
       if (Array.isArray(desc_item)) {
         for (let i = 0; i < desc_item.length; i++) {
           if (desc_item[i] && quantity[i] && unit_price[i] && SKU_num[i] && unit_of_measurement[i]) {
-            await connection.execute(`
+            await pool.execute(`
             INSERT INTO supplier_orders_transaction
               (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -672,7 +672,7 @@ const upload = multer({ storage: storage });
           }
         }
       } else {
-        await connection.execute(`
+        await pool.execute(`
         INSERT INTO supplier_orders_transaction
           (supply_order_id, SKU_num, desc_item, quantity, unit_of_measurement, unit_price)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -680,12 +680,12 @@ const upload = multer({ storage: storage });
       }
 
       // Email supplier
-      const [supplierData] = await connection.execute(
+      const [supplierData] = await pool.execute(
         `SELECT supplier_email, supplier_name FROM suppliers WHERE supplier_id = ?`,
         [supplierId]
       );
 
-      const [items] = await connection.execute(
+      const [items] = await pool.execute(
         `SELECT desc_item, SKU_num, quantity, unit_price, unit_of_measurement 
        FROM supplier_orders_transaction 
        WHERE supply_order_id = ?`,
@@ -737,7 +737,7 @@ const upload = multer({ storage: storage });
     const orderId = req.params.orderId;
 
     try {
-      const [orderItems] = await connection.execute(`
+      const [orderItems] = await pool.execute(`
       SELECT 
         sot.order_item_id,
         sot.SKU_num,
@@ -801,7 +801,6 @@ const upload = multer({ storage: storage });
 
     const params = [];
 
-    // 🗓️ Optional date filtering
     if (start_date && end_date) {
       query += ` AND DATE(so.supply_order_date) BETWEEN ? AND ?`;
       params.push(start_date, end_date);
@@ -810,7 +809,7 @@ const upload = multer({ storage: storage });
     query += ` ORDER BY so.supply_order_date ${sortOrder}`;
 
     try {
-      const [orders] = await connection.execute(query, params);
+      const [orders] = await pool.execute(query, params);
       res.render('supplier_orders_transaction_all', {
         orders,
         sortOrder,
@@ -826,7 +825,7 @@ const upload = multer({ storage: storage });
   //GET route to show completed transaction
   app.get('/supplier-orders/completed', async (req, res) => {
     try {
-      const [completedOrders] = await connection.execute(`
+      const [completedOrders] = await pool.execute(`
         SELECT 
           sot.order_item_id,
           sot.desc_item,
@@ -859,7 +858,7 @@ const upload = multer({ storage: storage });
 
   app.get('/supplier-orders/cancelled', async (req, res) => {
     try {
-      const [cancelledOrders] = await connection.execute(`
+      const [cancelledOrders] = await pool.execute(`
       SELECT 
       su.supplier_name,
       sot.desc_item,
@@ -890,10 +889,10 @@ const upload = multer({ storage: storage });
     const supplyOrderId = req.query.order;
 
     try {
-      console.log("🔄 Updating item:", itemId, "| Status:", status, "| Received:", received_quantity);
+      console.log("Updating item:", itemId, "| Status:", status, "| Received:", received_quantity);
 
       if (status === 'cancelled') {
-        await connection.execute(
+        await pool.execute(
           `UPDATE supplier_orders_transaction 
            SET status = ?, notes = ? 
            WHERE order_item_id = ?`,
@@ -903,7 +902,7 @@ const upload = multer({ storage: storage });
       } else if (status === 'partially_received') {
         const actualReceived = parseFloat(received_quantity || 0);
 
-        const [[row]] = await connection.execute(
+        const [[row]] = await pool.execute(
           `SELECT quantity
           FROM supplier_orders_transaction
           WHERE order_item_id = ? `,
@@ -911,7 +910,7 @@ const upload = multer({ storage: storage });
         );
 
         if (!row) {
-          console.error("❌ Order item not found.");
+          console.error("Order item not found.");
           return res.status(404).send("Order item not found");
         }
 
@@ -921,7 +920,7 @@ const upload = multer({ storage: storage });
         const newStatus = actualReceived >= originalQuantity ? 'completed' : 'partially_received';
 
         // Update transaction status and quantity
-        await connection.execute(
+        await pool.execute(
           `UPDATE supplier_orders_transaction
            SET received_quantity = ?,
           status = CASE 
@@ -933,14 +932,14 @@ const upload = multer({ storage: storage });
         );
 
         if (newStatus === 'completed' && invItemId) {
-          await connection.execute(
+          await pool.execute(
             `UPDATE inventory_items 
              SET inv_item_current_quantity = inv_item_current_quantity + ?
           WHERE inv_item_id = ? `,
             [actualReceived, invItemId]
           );
 
-          await connection.execute(
+          await pool.execute(
             `INSERT INTO inventory_transactions(inv_item_id, qty_change, transaction_type, notes)
              VALUES(?, ?, 'replenish', ?)`,
             [invItemId, actualReceived, `Replenished from supplier order item ID: ${itemId}`]
@@ -948,7 +947,7 @@ const upload = multer({ storage: storage });
         }
 
       } else {
-        await connection.execute(
+        await pool.execute(
           `UPDATE supplier_orders_transaction 
            SET status = ?
           WHERE order_item_id = ? `,
@@ -958,7 +957,7 @@ const upload = multer({ storage: storage });
 
       res.redirect(redirect || '/supplier-orders/transaction');
     } catch (err) {
-      console.error("❌ Failed to update status or note:", err);
+      console.error("Failed to update status or note:", err);
       res.status(500).send('Server error');
     }
   });
@@ -969,9 +968,9 @@ const upload = multer({ storage: storage });
   //GET receipe route
   app.get('/recipes', async (req, res) => {
     try {
-      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
-      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
-      const [recipes] = await connection.execute(`
+      const [inventoryItems] = await pool.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await pool.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+      const [recipes] = await pool.execute(`
       SELECT r.*, i.inv_item_name, m.menu_item_name
       FROM recipes r
       LEFT JOIN inventory_items i ON r.inv_item_id = i.inv_item_id
@@ -981,7 +980,7 @@ const upload = multer({ storage: storage });
 
       res.render('recipes', { inventoryItems, menuItems, recipes });
     } catch (err) {
-      console.error('❌ Failed to load recipes:', err);
+      console.error('Failed to load recipes:', err);
       res.status(500).send('Server error');
     }
   });
@@ -989,12 +988,12 @@ const upload = multer({ storage: storage });
   // GET route for new recipe
   app.get('/recipes/create', async (req, res) => {
     try {
-      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
-      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+      const [inventoryItems] = await pool.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await pool.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
 
       res.render('recipes_create', { inventoryItems, menuItems });
     } catch (err) {
-      console.error('❌ Failed to load recipe creation form:', err);
+      console.error('Failed to load recipe creation form:', err);
       res.status(500).send('Server error');
     }
   });
@@ -1005,7 +1004,7 @@ const upload = multer({ storage: storage });
 
     try {
 
-      await connection.execute(
+      await pool.execute(
         `INSERT INTO recipes(rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id)
          VALUES(?, ?, ?, ?, ?, ?)`,
         [rec_desc, ingredients, quantity, rec_ing_uom, inv_item_id, menu_item_id]
@@ -1013,7 +1012,7 @@ const upload = multer({ storage: storage });
 
       res.redirect('/recipes');
     } catch (err) {
-      console.error('❌ Failed to create recipe:', err);
+      console.error('Failed to create recipe:', err);
       res.status(500).send('Server error');
     }
   });
@@ -1023,17 +1022,17 @@ const upload = multer({ storage: storage });
     const recipeId = req.params.id;
 
     try {
-      const [[recipe]] = await connection.execute(
+      const [[recipe]] = await pool.execute(
         `SELECT * FROM recipes WHERE recipe_id = ? `,
         [recipeId]
       );
 
-      const [inventoryItems] = await connection.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
-      const [menuItems] = await connection.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
+      const [inventoryItems] = await pool.execute('SELECT inv_item_id, inv_item_name FROM inventory_items');
+      const [menuItems] = await pool.execute('SELECT menu_item_id, menu_item_name FROM menu_items');
 
       res.render('recipes_edit', { recipe, inventoryItems, menuItems });
     } catch (err) {
-      console.error('❌ Failed to load recipe for edit:', err);
+      console.error('Failed to load recipe for edit:', err);
       res.status(500).send('Server error');
     }
   });
@@ -1048,7 +1047,7 @@ const upload = multer({ storage: storage });
     // const parsedMenuId = parseInt(menu_item_id, 10);
 
     try {
-      await connection.execute(
+      await pool.execute(
         `UPDATE recipes 
        SET rec_desc = ?, ingredients = ?, quantity = ?, rec_ing_uom = ?, inv_item_id = ?, menu_item_id = ?
           WHERE recipe_id = ? `,
@@ -1057,7 +1056,7 @@ const upload = multer({ storage: storage });
 
       res.redirect('/recipes');
     } catch (err) {
-      console.error('❌ Failed to update recipe:', err);
+      console.error('Failed to update recipe:', err);
       res.status(500).send('Server error');
     }
   });
@@ -1069,7 +1068,7 @@ const upload = multer({ storage: storage });
   // Get route for employees 
   app.get('/employees_list', async (req, res) => {
     try {
-      const [employees] = await connection.execute(`
+      const [employees] = await pool.execute(`
       SELECT 
         e.emp_id,
           e.emp_name,
@@ -1085,7 +1084,7 @@ const upload = multer({ storage: storage });
 
       res.render('employees_list', { employees, shopName: employees[0]?.shop_name });
     } catch (err) {
-      console.error("❌ Failed to fetch roles:", err);
+      console.error("Failed to fetch roles:", err);
       res.status(500).send('Server error');
     }
   });
@@ -1093,10 +1092,10 @@ const upload = multer({ storage: storage });
   // GET all employee roles
   app.get('/employee_roles', async (req, res) => {
     try {
-      const [roles] = await connection.execute(`SELECT * FROM employees_role`);
+      const [roles] = await pool.execute(`SELECT * FROM employees_role`);
       res.render('employee_roles', { roles });
     } catch (err) {
-      console.error("❌ Failed to load employee roles:", err);
+      console.error("Failed to load employee roles:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1105,7 +1104,7 @@ const upload = multer({ storage: storage });
     const { emp_role, hourly_rate, monthly_rate } = req.body;
 
     try {
-      await connection.execute(
+      await pool.execute(
         `INSERT INTO employees_role(emp_role, hourly_rate, monthly_rate) VALUES(?, ?, ?)`,
         [
           emp_role,
@@ -1115,7 +1114,7 @@ const upload = multer({ storage: storage });
       );
       res.redirect('/employees/create');
     } catch (err) {
-      console.error("❌ Failed to create role:", err);
+      console.error("Failed to create role:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1123,11 +1122,11 @@ const upload = multer({ storage: storage });
   //GET route to create employees info
   app.get('/employees/create', async (req, res) => {
     try {
-      const [roles] = await connection.execute('SELECT emp_role_id, emp_role FROM employees_role');
-      const [shops] = await connection.execute('SELECT shop_id, shop_name FROM shops');
+      const [roles] = await pool.execute('SELECT emp_role_id, emp_role FROM employees_role');
+      const [shops] = await pool.execute('SELECT shop_id, shop_name FROM shops');
       res.render('employees_create', { roles, shops });
     } catch (err) {
-      console.error("❌ Failed to load employee creation form:", err);
+      console.error("Failed to load employee creation form:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1137,7 +1136,7 @@ const upload = multer({ storage: storage });
 
     try {
       const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
-      await connection.execute(`
+      await pool.execute(`
         INSERT INTO employees(emp_name, emp_hp, emp_pin, shop_id, emp_role_id)
         VALUES(?, ?, ?, ?, ?)`,
         [emp_name, emp_hp, hashedPin, shop_id, emp_role_id]
@@ -1146,7 +1145,7 @@ const upload = multer({ storage: storage });
       console.log(hashedPin);
       res.redirect('/employees_list');
     } catch (err) {
-      console.error("❌ Failed to create employee:", err);
+      console.error("Failed to create employee:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1156,7 +1155,7 @@ const upload = multer({ storage: storage });
     const empId = req.params.id;
 
     try {
-      const [[employee]] = await connection.execute(
+      const [[employee]] = await pool.execute(
         `SELECT 
         e.emp_id, e.emp_name, e.emp_hp, e.emp_role_id, e.shop_id,
           r.hourly_rate, r.monthly_rate
@@ -1165,12 +1164,12 @@ const upload = multer({ storage: storage });
        WHERE e.emp_id = ? `, [empId]
       );
 
-      const [roles] = await connection.execute(`SELECT * FROM employees_role`);
-      const [shops] = await connection.execute(`SELECT * FROM shops`);
+      const [roles] = await pool.execute(`SELECT * FROM employees_role`);
+      const [shops] = await pool.execute(`SELECT * FROM shops`);
 
       res.render('employees_edit', { employee, roles, shops });
     } catch (err) {
-      console.error("❌ Failed to load employee for edit:", err);
+      console.error("Failed to load employee for edit:", err);
       res.status(500).send('Server error');
     }
   });
@@ -1190,13 +1189,13 @@ const upload = multer({ storage: storage });
 
     try {
 
-      await connection.execute(`
+      await pool.execute(`
       UPDATE employees 
       SET emp_name = ?, emp_hp = ?, emp_role_id = ?, shop_id = ?
           WHERE emp_id = ?
             `, [emp_name, emp_hp, emp_role_id, shop_id, empId]);
 
-      await connection.execute(`
+      await pool.execute(`
       UPDATE employees_role 
       SET hourly_rate = ?, monthly_rate = ?
           WHERE emp_role_id = ?
@@ -1204,7 +1203,7 @@ const upload = multer({ storage: storage });
 
       if (emp_pin && emp_pin.trim() !== '') {
         const hashedPin = await bcrypt.hash(emp_pin, saltRounds);
-        await connection.execute(
+        await pool.execute(
           `UPDATE employees SET emp_pin = ? WHERE emp_id = ? `,
           [hashedPin, empId]
         );
@@ -1212,7 +1211,7 @@ const upload = multer({ storage: storage });
 
       res.redirect('/employees_list');
     } catch (err) {
-      console.error("❌ Failed to update employee:", err);
+      console.error("Failed to update employee:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1220,12 +1219,12 @@ const upload = multer({ storage: storage });
   // Route to render clock-in/out form
   app.get('/employee/clocking', async (req, res) => {
     try {
-      const [employees] = await connection.execute(`
+      const [employees] = await pool.execute(`
       SELECT emp_id, emp_name FROM employees
           `);
       res.render('employee_clocking', { employees });
     } catch (err) {
-      console.error("❌ Failed to load clocking page:", err);
+      console.error("Failed to load clocking page:", err);
       res.status(500).send("Server error");
     }
   });
@@ -1235,7 +1234,7 @@ const upload = multer({ storage: storage });
     const { emp_id, emp_pin } = req.body;
 
     try {
-      const [rows] = await connection.execute(`
+      const [rows] = await pool.execute(`
       SELECT emp_pin FROM employees WHERE emp_id = ?
           `, [emp_id]);
 
@@ -1248,21 +1247,21 @@ const upload = multer({ storage: storage });
         return res.status(401).send("Invalid PIN");
       }
 
-      const [existing] = await connection.execute(`
+      const [existing] = await pool.execute(`
       SELECT * FROM employee_clocking 
       WHERE emp_id = ? AND status = 'clocked_in' 
       ORDER BY clock_in_time DESC LIMIT 1
           `, [emp_id]);
 
       if (existing.length) {
-        await connection.execute(`
+        await pool.execute(`
         UPDATE employee_clocking 
         SET clock_out_time = NOW(), status = 'clocked_out' 
         WHERE clocking_id = ?
           `, [existing[0].clocking_id]);
       } else {
 
-        await connection.execute(`
+        await pool.execute(`
         INSERT INTO employee_clocking(emp_id, clock_in_time, status) 
         VALUES(?, NOW(), 'clocked_in')
             `, [emp_id]);
@@ -1287,7 +1286,7 @@ const upload = multer({ storage: storage });
     }
 
     try {
-      const [clockingData] = await connection.execute(
+      const [clockingData] = await pool.execute(
         `SELECT 
         e.emp_name,
           ec.clocking_date,
@@ -1317,7 +1316,7 @@ const upload = multer({ storage: storage });
   // GET Route for Customers List
   app.get('/customers', async (req, res) => {
     try {
-      const [customers] = await connection.execute(`
+      const [customers] = await pool.execute(`
       SELECT 
         customer_id,
         User_name,
@@ -1344,7 +1343,7 @@ const upload = multer({ storage: storage });
   // GET route to show completed orders with subtotal, tax, and total
   app.get('/orders/completed/summary', async (req, res) => {
     try {
-      const [completedOrders] = await connection.execute(`
+      const [completedOrders] = await pool.execute(`
       SELECT 
         ot.order_id,
         ot.order_date,
@@ -1380,7 +1379,7 @@ const upload = multer({ storage: storage });
       console.log(`✅ Simulating payment complete for order ${orderId}`);
 
       // 1. Update order_transaction to 'completed'
-      await connection.execute(`
+      await pool.execute(`
       UPDATE order_transaction
       SET status = 'completed'
       WHERE order_id = ?
@@ -1389,7 +1388,7 @@ const upload = multer({ storage: storage });
       console.log(`✅ Order ${orderId} marked as completed.`);
 
       // 2. Get all items linked to the order
-      const [orderItems] = await connection.execute(`
+      const [orderItems] = await pool.execute(`
       SELECT oc.order_item_id, oc.quantity, oc.menu_item_id
       FROM order_transaction_items oti
       JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
@@ -1402,7 +1401,7 @@ const upload = multer({ storage: storage });
       for (let item of orderItems) {
         const { quantity: saleQuantity, menu_item_id } = item;
 
-        const [recipes] = await connection.execute(`
+        const [recipes] = await pool.execute(`
         SELECT r.inv_item_id, r.quantity, r.rec_ing_uom
         FROM recipes r
         WHERE r.menu_item_id = ?
@@ -1421,14 +1420,14 @@ const upload = multer({ storage: storage });
           console.log(`📦 Deducting ${usedQuantity} kg from inventory item ${inv_item_id}`);
 
           // Deduct from inventory
-          await connection.execute(`
+          await pool.execute(`
           UPDATE inventory_items
           SET inv_item_current_quantity = inv_item_current_quantity - ?
           WHERE inv_item_id = ?
         `, [usedQuantity, inv_item_id]);
 
           // Insert inventory transaction log
-          await connection.execute(`
+          await pool.execute(`
           INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
           VALUES (?, ?, 'sale', ?)
         `, [inv_item_id, -usedQuantity, `Auto deduction from completed order ID ${orderId}`]);
@@ -1450,7 +1449,7 @@ const upload = multer({ storage: storage });
       console.log(`🛒 Triggering inventory update for completed order ID: ${orderId}`);
 
       // 1️⃣ Fetch all menu items from the order
-      const [orderItems] = await connection.execute(`
+      const [orderItems] = await pool.execute(`
       SELECT oc.menu_item_id, oc.quantity
       FROM order_transaction_items oti
       JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
@@ -1462,7 +1461,7 @@ const upload = multer({ storage: storage });
         const orderedQty = item.quantity;
 
         // 2️⃣ Fetch ingredients (recipes) for the menu item
-        const [recipes] = await connection.execute(`
+        const [recipes] = await pool.execute(`
         SELECT inv_item_id, quantity, rec_ing_uom
         FROM recipes
         WHERE menu_item_id = ?
@@ -1485,14 +1484,14 @@ const upload = multer({ storage: storage });
           console.log(`🔻 Deduct ${totalQtyToDeduct}kg from inventory item ID ${invItemId}`);
 
           // 4️⃣ Update inventory
-          await connection.execute(`
+          await pool.execute(`
           UPDATE inventory_items
           SET inv_item_current_quantity = inv_item_current_quantity - ?
           WHERE inv_item_id = ?
         `, [totalQtyToDeduct, invItemId]);
 
           // 5️⃣ Log into inventory_transactions
-          await connection.execute(`
+          await pool.execute(`
           INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
           VALUES (?, ?, 'sale', ?)
         `, [invItemId, -totalQtyToDeduct, `Deducted after sales order ID: ${orderId}`]);
@@ -1513,7 +1512,7 @@ const upload = multer({ storage: storage });
   app.get('/shop-overview', async (req, res) => {
     try {
       // 1️⃣ Calculate Employees Wages
-      const [employeeWages] = await connection.execute(`
+      const [employeeWages] = await pool.execute(`
       SELECT 
         SUM(CASE 
           WHEN er.hourly_rate IS NULL THEN er.monthly_rate  -- Full timers
@@ -1533,7 +1532,7 @@ const upload = multer({ storage: storage });
 
 
       // 2️⃣ Calculate Supplier Order Costs
-      const [supplierCosts] = await connection.execute(`
+      const [supplierCosts] = await pool.execute(`
       SELECT 
         SUM((sot.quantity * sot.unit_price) * 1.09) AS total_supplier_cost
       FROM supplier_orders_transaction sot
@@ -1544,7 +1543,7 @@ const upload = multer({ storage: storage });
       const totalSupplierCost = parseFloat(supplierCosts[0]?.total_supplier_cost) || 0;
 
       // 3️⃣ Calculate Total Sales Revenue
-      const [salesRevenue] = await connection.execute(`
+      const [salesRevenue] = await pool.execute(`
       SELECT 
         SUM((mi.menu_item_price * oc.quantity) * 1.09) AS total_revenue
       FROM order_transaction ot
@@ -1571,7 +1570,7 @@ const upload = multer({ storage: storage });
 
  
 
-
+  app.use('/api/users', userRouter);
 
 }//end
 
