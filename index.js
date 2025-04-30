@@ -2,7 +2,7 @@ const express = require('express');
 const hbs = require('hbs');
 const waxOn = require('wax-on');
 require('dotenv').config();
-const { createConnection } = require('mysql2/promise');
+// const { createConnection } = require('mysql2/promise');
 const { defaultConfiguration } = require('express/lib/application');
 const XLSX = require('xlsx');
 const cors = require('cors');
@@ -12,13 +12,15 @@ const nodemailer = require('nodemailer');
 const { truncate } = require('fs/promises');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-
+const pool = require('./database');
 
 let app = express();
 app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
+
+const userRouter = require('./routes/users');
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -66,13 +68,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-async function main() {
-  connection = await createConnection({
-    'host': process.env.DB_HOST,
-    'user': process.env.DB_USER,
-    'database': process.env.DB_NAME,
-    'password': process.env.DB_PASSWORD
-  })
+ async function main() {
+  // connection = await createConnection({
+  //   'host': process.env.DB_HOST,
+  //   'user': process.env.DB_USER,
+  //   'database': process.env.DB_NAME,
+  //   'password': process.env.DB_PASSWORD
+  // })
 
   app.get('/', async function (req, res) {
     res.render('index');
@@ -82,7 +84,7 @@ async function main() {
   //***** ALL Menu route starts here*****//
   //see all menu
   app.get('/menu', async function (req, res) {
-    const [menuItems] = await connection.execute("SELECT * FROM menu_items")
+    const [menuItems] = await pool.execute("SELECT * FROM menu_items")
     console.log(menuItems);
     res.render('menu', {
       "allMenu": menuItems
@@ -91,7 +93,7 @@ async function main() {
 
   //add new menu into database and display in a new page
   app.get('/menu/create', async function (req, res) {
-    const [menuItems] = await connection.execute("SELECT * FROM menu_items");
+    const [menuItems] = await pool.execute("SELECT * FROM menu_items");
     const [shops] = await connection.execute("SELECT * FROM shops");
     res.render('create_menu', {
       "allMenu": menuItems,
@@ -105,7 +107,7 @@ async function main() {
     const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
-      await connection.execute(`
+      await pool.execute(`
         INSERT INTO menu_items 
         (menu_item_name, menu_item_price, is_active, image_url, shop_id) 
         VALUES (?, ?, ?, ?, ?)
@@ -121,8 +123,8 @@ async function main() {
   //edit menu route
   app.get('/menu/:id/update', async (req, res) => {
     const menuId = req.params.id;
-    const [menuItems] = await connection.execute("SELECT * FROM menu_items WHERE menu_item_id = ?", [menuId]);
-    const [shops] = await connection.execute("SELECT * FROM shops");
+    const [menuItems] = await pool.execute("SELECT * FROM menu_items WHERE menu_item_id = ?", [menuId]);
+    const [shops] = await pool.execute("SELECT * FROM shops");
 
     if (menuItems.length === 0) {
       return res.status(404).send('Menu item not found');
@@ -152,7 +154,7 @@ async function main() {
     if (image_url) params.push(image_url);
     params.push(id);
 
-    await connection.execute(updateQuery, params);
+    await pool.execute(updateQuery, params);
     res.redirect('/menu');
   });
 
@@ -161,7 +163,7 @@ async function main() {
     const menuItemId = req.params.id;
 
     try {
-      await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
+      await pool.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
       res.redirect('/menu');
     } catch (err) {
       console.error('Error deleting menu item:', err);
@@ -174,7 +176,7 @@ async function main() {
     const menuItemId = req.params.id;
 
     try {
-      await connection.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
+      await pool.execute('DELETE FROM menu_items WHERE menu_item_id = ?', [menuItemId]);
       res.redirect('/menu');
     } catch (err) {
       console.error('Error deleting menu item:', err);
@@ -1567,7 +1569,7 @@ async function main() {
 
 
 
-
+ 
 
 
 
