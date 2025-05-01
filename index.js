@@ -15,6 +15,7 @@ const saltRounds = 10;
 const pool = require('./database');
 
 let app = express();
+app.use(express.json());
 app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));

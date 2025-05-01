@@ -21,8 +21,8 @@ async function getUserById(id) {
 }
 
 
-async function createUser({ User_name, email, password, phone }) {
-    if (!email || !password || typeof email !== 'string' || typeof password !== 'string' || typeof phone !== 'string') {
+async function createUser({ User_name, email, phone, password}) {
+    if (!email || !password || !phone || typeof email !== 'string' || typeof password !== 'string' || typeof phone !== 'string') {
         throw new Error('Invalid user data');
     }
 
@@ -32,8 +32,8 @@ async function createUser({ User_name, email, password, phone }) {
 
         // Insert customers data
         const [userResult] = await connection.query(
-            `INSERT INTO customers (User_name, email, password, phone) VALUES (?, ?, ?, ?)`,
-            [User_name, email, password, phone]
+            `INSERT INTO customers (User_name, email, phone, password ) VALUES (?, ?, ?, ?)`,
+            [User_name, email, phone, password]
         );
         const userId = userResult.insertId;
 

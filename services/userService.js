@@ -1,7 +1,7 @@
 const userData = require('../data/userData');
 const bcrypt = require('bcrypt');
 
-async function registerUser({ User_name, email, password, phone}) {
+async function registerUser({ User_name, email, phone, password}) {
     if (password.length < 8) {
         throw new Error('Password must be at least 8 characters long');
     }
@@ -15,8 +15,9 @@ async function registerUser({ User_name, email, password, phone}) {
     return await userData.createUser({
         User_name,
         email,
-        password: hashedPassword,
-        phone
+        phone,
+        password: hashedPassword
+        
     });
 }
 
