@@ -47,31 +47,30 @@ async function createUser({ User_name, email, phone, password}) {
     }
 }
 
-async function updateUser(id, { User_name, email, phone }) {
+async function updateUser(id, { User_name, email, phone, password }) {
     if (!id || typeof id !== 'number') {
-        throw new Error('Invalid user ID');
+      throw new Error('Invalid user data');
     }
-
+  
     const connection = await pool.getConnection();
     try {
-        await connection.beginTransaction();
+      await connection.beginTransaction();
+  
+      // Update user data
+      await connection.query(
+        `UPDATE custpmers SET User_name = ?, email = ?, phone = ?, password = ? WHERE customers.customer.id = ?`,
+        [User_name, email, phone, password]
+      );
 
-        // Update user data
-        await connection.query(
-            `UPDATE customers SET User_name = ?, email = ?, phone WHERE customer_id = ?`,
-            [User_name, email, phone]
-        );
-
-        await connection.commit();
+      await connection.commit();
     } catch (error) {
-        await connection.rollback();
-        throw error;
+      await connection.rollback();
+      throw error;
     } finally {
-        connection.release();
+      connection.release();
     }
-}
-
-
+  }
+  
 
 module.exports = {
     getUserByEmail,

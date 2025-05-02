@@ -39,15 +39,12 @@ async function updateUserDetails(id, userDetails) {
     return await userData.updateUser(id, userDetails);
 }
 
-async function getUserDetailsById(id) {
-    return await userData.getUserById(id);
-}
 
 module.exports = {
     registerUser,
     loginUser,
     updateUserDetails,
-    getUserDetailsById
+
 };
 
 

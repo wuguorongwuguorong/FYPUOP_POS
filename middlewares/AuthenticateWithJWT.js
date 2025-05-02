@@ -11,7 +11,7 @@ function AuthenticateWithJWT(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET); // Replace with your JWT secret
-    req.userId = decoded.userId; // Assuming the JWT payload contains `id`
+    req.userId = decoded.userId; 
     next();
   } catch (error) {
     return res.status(403).json({ message: 'Invalid or expired token' });

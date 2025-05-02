@@ -69,6 +69,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+app.use('/api/users', userRouter);
+
  async function main() {
   // connection = await createConnection({
   //   'host': process.env.DB_HOST,
@@ -1571,7 +1573,7 @@ const upload = multer({ storage: storage });
 
  
 
-  app.use('/api/users', userRouter);
+ 
 
 }//end
 
