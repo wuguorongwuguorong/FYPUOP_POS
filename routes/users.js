@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userService = require('../services/userService');
 const jwt = require('jsonwebtoken');
+const AuthenticateWithJWT = require('../middlewares/AuthenticateWithJWT');
 
 // POST register a new user
 router.post('/register', async (req, res) => {
@@ -61,7 +62,7 @@ router.post('/login', async (req, res) => {
 // get the details of the current logged-in user from a JWT
 router.get('/me', AuthenticateWithJWT, async (req, res) => {
   try {
-      const user = await userService.getUserDetailsByEmail(req.userId);
+      const user = await userService.getUserDetailsById(req.userId);
       if (!user) {
           return res.status(404).json({
               message: "User is not found"

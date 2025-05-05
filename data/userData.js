@@ -9,11 +9,11 @@ async function getUserByEmail(email) {
 }
 
 
-async function getUserById(id) {
-    if (!id || typeof id !== 'number') {
+async function getUserById(customer_id) {
+    if (!customer_id || typeof customer_id !== 'number') {
         throw new Error('Invalid Customer ID');
     }
-    const [rows] = await pool.query(`SELECT * FROM customers WHERE customers.customer_id = ?`, [id]);
+    const [rows] = await pool.query(`SELECT * FROM customers WHERE customers.customer_id = ?`, [customer_id]);
     const user = rows[0];
 
 
@@ -48,7 +48,7 @@ async function createUser({ User_name, email, phone, password}) {
 }
 
 async function updateUser(id, { User_name, email, phone, password }) {
-    if (!id || typeof id !== 'number') {
+    if (!customer_id || typeof customer_id !== 'number') {
       throw new Error('Invalid user data');
     }
   
@@ -58,7 +58,7 @@ async function updateUser(id, { User_name, email, phone, password }) {
   
       // Update user data
       await connection.query(
-        `UPDATE custpmers SET User_name = ?, email = ?, phone = ?, password = ? WHERE customers.customer.id = ?`,
+        `UPDATE customers SET User_name = ?, email = ?, phone = ?, password = ? WHERE customers.customer.id = ?`,
         [User_name, email, phone, password]
       );
 

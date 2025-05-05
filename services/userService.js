@@ -35,6 +35,10 @@ async function loginUser(email, password) {
     return user;
 }
 
+async function getUserDetailsById(id) {
+    return await userData.getUserById(id);
+  }
+
 async function updateUserDetails(id, userDetails) {
     return await userData.updateUser(id, userDetails);
 }
@@ -43,6 +47,7 @@ async function updateUserDetails(id, userDetails) {
 module.exports = {
     registerUser,
     loginUser,
+    getUserDetailsById,
     updateUserDetails,
 
 };
