@@ -110,5 +110,19 @@ router.put('/me', AuthenticateWithJWT, async (req, res) => {
   } 
 })
 
+// delete the current user
+router.delete('/me', AuthenticateWithJWT, async (req, res) => {
+  try {
+    await userService.deleteUserAccount(req.userId);
+    res.json({
+       'message': "User account deleted"
+    })
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+       'message':'Internal Server Error'
+    })
+  }
+ })
 
 module.exports = router;

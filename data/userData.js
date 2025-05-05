@@ -70,13 +70,33 @@ async function updateUser(customer_id, { User_name, email, phone, password }) {
       connection.release();
     }
   }
+
+  async function deleteUser(customer_id) {
+    if (!customer_id || typeof customer_id !== 'number') {
+      throw new Error('Invalid user ID');
+    }
   
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await connection.query(`DELETE FROM customers WHERE customer_id = ?`, [customer_id]);
+  
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 
 module.exports = {
     getUserByEmail,
     getUserById,
     createUser,
-    updateUser
+    updateUser,
+    deleteUser
 };
 
 
