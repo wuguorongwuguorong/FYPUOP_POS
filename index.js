@@ -22,6 +22,7 @@ app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 
 const userRouter = require('./routes/users');
+const productsRouter = require('./routes/products');
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -70,6 +71,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.use('/api/users', userRouter);
+app.use('/api/products', productsRouter);
 
  async function main() {
   // connection = await createConnection({
