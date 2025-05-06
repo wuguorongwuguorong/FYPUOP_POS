@@ -14,13 +14,13 @@ async function getProductByName(name) {
   }
 }
 
-async function getAllProducts() {
-    const [rows] = await pool.query(`SELECT menu_item_id, menu_item_name, CAST(menu_item_price AS DOUBLE) AS price, image FROM image_url`);
-    return rows;
-  }
+  async function getAllProducts() {
+      const [rows] = await pool.query(`SELECT menu_item_id, menu_item_name, CAST(menu_item_price AS DOUBLE) AS price, image_url FROM menu_items`);
+      return rows;
+    }
 
-  module.exports = {
-    getAllProducts,
-    getProductByName,
+    module.exports = {
+      getAllProducts,
+      getProductByName,
 
-  };
+    };
