@@ -16,6 +16,14 @@ router.get('/cart', async (req, res) => {
     }
   });
   
-
+  router.put('/editcart', async (req, res) => {
+    try {
+      const cartItems = req.body.cartItems; // Expects an array of items with productId and quantity
+      await cartService.updateCart(req.user.userId, cartItems);
+      res.json({ message: 'Cart updated successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
 module.exports = router;
