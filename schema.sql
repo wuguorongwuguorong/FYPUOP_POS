@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS order_cart (
     special_instructions TEXT ,
     rating INT DEFAULT NULL,
     FOREIGN KEY (menu_item_id) REFERENCES menu_items(menu_item_id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (shop_id) REFERENCES shops(shops_id) ON DELETE CASCADE
 )engine = innodb;
 
@@ -239,6 +240,8 @@ ALTER TABLE order_cart ADD COLUMN menu_item_id int;
 ALTER TABLE order_cart ADD CONSTRAINT fk_menu_order_item FOREIGN KEY(menu_item_id) REFERENCES menu_items(menu_item_id);
 ALTER TABLE order_cart ADD COLUMN shop_id int;
 ALTER TABLE order_cart ADD CONSTRAINT fk_shop_orders FOREIGN KEY(shop_id) REFERENCES shops(shop_id);
+ALTER TABLE order_cart ADD COLUMN customer_id int;
+ALTER TABLE order_cart ADD CONSTRAINT fk_cust_orders FOREIGN KEY(customer_id) REFERENCES customers(customer_id);
 
 ALTER TABLE order ADD COLUMN order_item_id int;
 ALTER TABLE orders ADD COLUMN customer_id int;
