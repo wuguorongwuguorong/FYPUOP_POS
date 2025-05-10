@@ -53,7 +53,6 @@ module.exports = {
     getUserDetailsById,
     updateUserDetails,
     deleteUserAccount
-
 };
 
 

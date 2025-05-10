@@ -26,6 +26,7 @@ app.use('/assets', express.static('assets'));
 
 const userRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
+const cartRouter = require('./routes/cart');
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -75,6 +76,7 @@ const upload = multer({ storage: storage });
 
 app.use('/api/users', userRouter);
 app.use('/api/products', productsRouter);
+app.use('/api/cart', cartRouter);
 
  async function main() {
   // connection = await createConnection({
