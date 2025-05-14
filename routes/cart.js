@@ -4,7 +4,7 @@ const cartService = require('../services/cartService');
 const AuthenticateWithJWT = require('../middlewares/AuthenticateWithJWT');
 
 // GET cart contents
-router.get('/', [AuthenticateWithJWT], async (req, res) => {
+router.get('/cart', [AuthenticateWithJWT], async (req, res) => {
   try {
     const cartContents = await cartService.getCartContents(req.userId);
     res.json(cartContents);
@@ -14,7 +14,7 @@ router.get('/', [AuthenticateWithJWT], async (req, res) => {
 });
 
 // PUT bulk update cart
-router.put('/', [AuthenticateWithJWT], async (req, res) => {
+router.put('/editcart', [AuthenticateWithJWT], async (req, res) => {
   try {
     const cartItems = req.body.cartItems; // Expects an array of items with productId and quantity
     await cartService.updateCart(req.userId, cartItems);
