@@ -137,6 +137,14 @@ const verifyToken = (req, res, next) => {
       res.render('index'); // Render the admin dashboard page
   });
 
+  app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.redirect('/'); // Redirect to login after logging out
+    });
+  });
+
+
+
   //***** ALL Menu route starts here*****//
   //see all menu
   app.get('/menu', async function (req, res) {
