@@ -87,12 +87,6 @@ app.use('/api/products', productsRouter);
 app.use('/api/cart', cartRouter);
 
  async function main() {
-  // connection = await createConnection({
-  //   'host': process.env.DB_HOST,
-  //   'user': process.env.DB_USER,
-  //   'database': process.env.DB_NAME,
-  //   'password': process.env.DB_PASSWORD
-  // })
 
   const JWT_SECRET = process.env.JWT_SECRET;
 
