@@ -9,7 +9,7 @@ async function getCartContents(userId) {
         o.order_item_id
         c.customer_id, 
         o.menu_item_id, 
-        m.image_url AS imageUrl, 
+        m.image_url AS imageUrl,
         m.menu_item_name AS productName, 
         CAST(m.menu_item_price AS DOUBLE) AS price, 
         o.quantity 

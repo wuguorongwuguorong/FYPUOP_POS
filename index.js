@@ -13,6 +13,8 @@ const { truncate } = require('fs/promises');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const pool = require('./database');
+const jwt = require('jsonwebtoken');
+const session = require('express-session');
 
 let app = express();
 app.use(express.json());
@@ -20,8 +22,8 @@ app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
-app.use('/assets', express.static('assets'));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 const userRouter = require('./routes/users');
@@ -74,6 +76,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+})); 
+
 app.use('/api/users', userRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/cart', cartRouter);
@@ -86,9 +94,53 @@ app.use('/api/cart', cartRouter);
   //   'password': process.env.DB_PASSWORD
   // })
 
-  app.get('/', async function (req, res) {
-    res.render('index');
+  const JWT_SECRET = process.env.JWT_SECRET;
 
+  // Generate JWT Token
+  const generateAccessToken = (username) => {
+      return jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+  };
+  
+const verifyToken = (req, res, next) => {
+  const token = req.session.token; // Get token from session
+
+  if (!token) return res.sendStatus(403); // Forbidden
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403); // Forbidden
+    req.user = user; // Attach user info to the request
+    next();
+  });
+};
+  
+  // Route to serve the login form
+  app.get('/', (req, res) => {
+      res.render('admin_login'); // Render the admin login page
+  });
+  
+  // POST route for login
+  app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    // Check if the username and password match the hardcoded credentials
+    if (username === 'admin123' && password === 'password123') {
+      // If the login is successful, generate a token
+      const token = generateAccessToken(username);
+  
+      // Store the token in the session
+      req.session.token = token;
+  
+      // Redirect to the home page (index.hbs)
+      res.redirect('/index');
+    } else {
+      // If login fails, send an error
+      res.render('admin_login', { error: 'Invalid username or password' });
+    }
+  });
+  
+  // Protect routes that require login with verifyToken middleware
+  app.get('/index', verifyToken, (req, res) => {
+      res.render('index'); // Render the admin dashboard page
   });
 
   //***** ALL Menu route starts here*****//
