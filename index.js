@@ -22,10 +22,10 @@ app.use(cors());
 app.set('view engine', 'hbs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-
+console.log('__dirname', __dirname)
 const userRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
 const cartRouter = require('./routes/cart');
@@ -168,7 +168,7 @@ const verifyToken = (req, res, next) => {
   // POST route to create menu item
   app.post('/menu/create', upload.single('image_url'), async function (req, res) {
     const { menu_item_name, menu_item_price, is_active, shop_id } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const image_url = req.file ? `uploads/${req.file.filename}` : null;
 
     try {
       await pool.execute(`
@@ -207,7 +207,7 @@ const verifyToken = (req, res, next) => {
 
     let image_url = null;
     if (req.file) {
-      image_url = '/assets/' + req.file.filename;
+      image_url = req.file.filename;
     }
 
     let updateQuery = `UPDATE menu_items 
