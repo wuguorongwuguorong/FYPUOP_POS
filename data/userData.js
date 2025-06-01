@@ -20,6 +20,16 @@ async function getUserById(customer_id) {
     return user;
 }
 
+async function getUserTransactionById(customer_id) {
+    if (!customer_id || typeof customer_id !== 'number') {
+        throw new Error('Invalid Customer ID');
+    }
+    const [rows] = await pool.query(`SELECT * FROM customer_transactions WHERE customer_id = ?`, [customer_id]);
+    const user = rows[0];
+
+
+    return user;
+}
 
 async function createUser({ User_name, email, phone, password}) {
     if (!email || !password || !phone || typeof email !== 'string' || typeof password !== 'string' || typeof phone !== 'string') {
@@ -96,7 +106,8 @@ module.exports = {
     getUserById,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    getUserTransactionById
 };
 
 
