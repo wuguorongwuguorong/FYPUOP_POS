@@ -80,38 +80,38 @@ app.use(session({
   secret: 'your-secret-key',
   resave: false,
   saveUninitialized: true,
-})); 
+}));
 
 app.use('/api/users', userRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/cart', cartRouter);
 
- async function main() {
+async function main() {
 
   const JWT_SECRET = process.env.JWT_SECRET;
 
   // Generate JWT Token
   const generateAccessToken = (username) => {
-      return jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    return jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
   };
-  
-const verifyToken = (req, res, next) => {
-  const token = req.session.token; // Get token from session
 
-  if (!token) return res.sendStatus(403); // Forbidden
+  const verifyToken = (req, res, next) => {
+    const token = req.session.token; // Get token from session
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403); // Forbidden
-    req.user = user; // Attach user info to the request
-    next();
-  });
-};
-  
+    if (!token) return res.sendStatus(403); // Forbidden
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (err) return res.sendStatus(403); // Forbidden
+      req.user = user; // Attach user info to the request
+      next();
+    });
+  };
+
   // Route to serve the login form
   app.get('/', (req, res) => {
-      res.render('admin_login'); // Render the admin login page
+    res.render('admin_login'); // Render the admin login page
   });
-  
+
   // POST route for login
   app.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -120,10 +120,10 @@ const verifyToken = (req, res, next) => {
     if (username === 'admin123' && password === 'password123') {
       // If the login is successful, generate a token
       const token = generateAccessToken(username);
-  
+
       // Store the token in the session
       req.session.token = token;
-  
+
       // Redirect to the home page (index.hbs)
       res.redirect('/index');
     } else {
@@ -131,11 +131,58 @@ const verifyToken = (req, res, next) => {
       res.render('admin_login', { error: 'Invalid username or password' });
     }
   });
-  
+
   // Protect routes that require login with verifyToken middleware
-  app.get('/index', verifyToken, (req, res) => {
-      res.render('index'); // Render the admin dashboard page
-  });
+app.get('/index', verifyToken, async (req, res) => {
+  try {
+    // Low stock items (example query)
+    const [lowStockItems] = await pool.execute(`
+      SELECT inv_item_name, inv_item_current_quantity
+      FROM inventory_items
+      WHERE inv_item_current_quantity <= inv_item_reorder_level
+    `);
+
+    // Daily sales (using the updated query to calculate total sales)
+    const [dailySales] = await pool.execute(`
+      SELECT SUM(oc.quantity * mi.menu_item_price) AS daily_sales
+      FROM order_transaction ot
+      JOIN order_cart oc ON ot.order_item_id = oc.order_item_id
+      JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
+      WHERE DATE(ot.order_date) = CURDATE() - INTERVAL 1 DAY
+    `);
+
+    // Most ordered menu items (example query)
+    const [mostOrderedMenu] = await pool.execute(`
+      SELECT menu_item_name, COUNT(*) AS order_count
+      FROM order_transaction ot
+      JOIN order_cart oc ON ot.order_item_id = oc.order_item_id
+      JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
+      WHERE DATE(ot.order_date) = CURDATE() - INTERVAL 1 DAY
+      GROUP BY menu_item_name
+      ORDER BY order_count DESC
+      LIMIT 5
+    `);
+
+    // Transactions for the current month (example query)
+    const [transactionsCurrentMonth] = await pool.execute(`
+      SELECT * FROM order_transaction
+      WHERE MONTH(order_date) = MONTH(CURRENT_DATE)
+    `);
+
+    // Pass all the data to the view
+    res.render('index', {
+      shopName: 'Your Shop Name', // Example: dynamic shop name if needed
+      lowStockItems,
+      dailySales: dailySales[0].daily_sales,
+      mostOrderedMenu,
+      transactionsCurrentMonth
+    });
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    res.status(500).send('Server error');
+  }
+});
+
 
   app.get('/logout', (req, res) => {
     req.session.destroy(() => {
@@ -1632,9 +1679,9 @@ const verifyToken = (req, res, next) => {
 
 
 
- 
 
- 
+
+
 
 }//end
 

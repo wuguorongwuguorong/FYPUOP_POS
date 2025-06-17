@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS employee_clocking (
         END
     ) STORED,
     status ENUM('clocked_in', 'clocked_out') DEFAULT 'clocked_in' 
-   
+   FOREIGN KEY (emp_id) REFERENCES employees(emp_id) ON DELETE CASCADE  
 ) ENGINE=InnoDB;
 ALTER TABLE employee_clocking ADD COLUMN emp_id int;
 ALTER TABLE employee_clocking ADD CONSTRAINT fk_employee_timesheet FOREIGN KEY(emp_id) REFERENCES employees(emp_id);
@@ -209,6 +209,8 @@ ALTER TABLE order_transaction ADD CONSTRAINT fk_cust_order_trans FOREIGN KEY(ord
 
 CREATE TABLE IF NOT EXISTS order_transaction_items(
 trans_item_id INT AUTO_INCREMENT PRIMARY KEY
+FOREIGN KEY(order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE,
+FOREIGN KEY(order_id) REFERENCES order_transaction(order_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 Alter TABLE order_transaction_items ADD COLUMN order_item_id INT;
 ALTER TABLE order_transaction_items ADD CONSTRAINT fk_order_ordered_item FOREIGN KEY(order_item_id) REFERENCES order_cart(order_item_id);
