@@ -6,6 +6,7 @@ require('dotenv').config();
 const { defaultConfiguration } = require('express/lib/application');
 const XLSX = require('xlsx');
 const cors = require('cors');
+const stripe = require("stripe")("sk_test_51RZ9GIFv0dHnzuwCLYRSvxXYbzhM9q8EhkhUUq98uSWIgXDwQbWcprlHgAKiOsjQqEAy29O80kUp4mU6x95m5UC50042Tr1y3s");
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
@@ -29,6 +30,7 @@ console.log('__dirname', __dirname)
 const userRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
 const cartRouter = require('./routes/cart');
+const stripeRoutes = require('./routes/stripe'); 
 
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
@@ -85,6 +87,7 @@ app.use(session({
 app.use('/api/users', userRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/cart', cartRouter);
+app.use("/api/stripe", stripeRoutes);
 
 async function main() {
 
@@ -183,8 +186,8 @@ app.get('/index', verifyToken, async (req, res) => {
   }
 });
 
-
-  app.get('/logout', (req, res) => {
+// user logout route
+app.get('/logout', (req, res) => {
     req.session.destroy(() => {
       res.redirect('/'); // Redirect to login after logging out
     });
