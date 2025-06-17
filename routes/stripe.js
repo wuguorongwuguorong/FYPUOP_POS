@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // secret key dari .env
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); 
 
 router.post("/create-checkout-session", async (req, res) => {
   const { cart, customer_id, order_id } = req.body;
@@ -12,7 +12,7 @@ router.post("/create-checkout-session", async (req, res) => {
     product_data: {
       name: `${item.productName} (+9% tax included)`,
     },
-    unit_amount: Math.round(item.price * 1.09 * 100), // Harga + pajak 9%
+    unit_amount: Math.round(item.price * 1.09 * 100)
   },
   quantity: item.quantity,
     }));
@@ -31,7 +31,7 @@ router.post("/create-checkout-session", async (req, res) => {
 
     res.json({ url: session.url });
   } catch (err) {
-    console.error("❌ Stripe Error:", err);
+    console.error("Stripe Error:", err);
     res.status(500).json({ error: "Stripe session creation failed" });
   }
 });

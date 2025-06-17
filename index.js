@@ -6,7 +6,7 @@ require('dotenv').config();
 const { defaultConfiguration } = require('express/lib/application');
 const XLSX = require('xlsx');
 const cors = require('cors');
-const stripe = require("stripe")("sk_test_51RZ9GIFv0dHnzuwCLYRSvxXYbzhM9q8EhkhUUq98uSWIgXDwQbWcprlHgAKiOsjQqEAy29O80kUp4mU6x95m5UC50042Tr1y3s");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
