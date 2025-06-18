@@ -32,6 +32,7 @@ const productsRouter = require('./routes/products');
 const cartRouter = require('./routes/cart');
 const stripeRoutes = require('./routes/stripe'); 
 
+
 waxOn.on(hbs.handlebars);
 waxOn.setLayoutPath('./views/layouts');
 
@@ -1479,7 +1480,7 @@ app.get('/logout', (req, res) => {
 
       res.render('orders_completed_summary', { completedOrders });
     } catch (err) {
-      console.error("❌ Failed to fetch completed orders summary:", err);
+      console.error("Failed to fetch completed orders summary:", err);
       res.status(500).send('Server error');
     }
   });
@@ -1490,7 +1491,7 @@ app.get('/logout', (req, res) => {
     const orderId = req.params.orderId;
 
     try {
-      console.log(`✅ Simulating payment complete for order ${orderId}`);
+      console.log(`Simulating payment complete for order ${orderId}`);
 
       // 1. Update order_transaction to 'completed'
       await pool.execute(`
@@ -1521,7 +1522,7 @@ app.get('/logout', (req, res) => {
         WHERE r.menu_item_id = ?
       `, [menu_item_id]);
 
-        console.log(`🔍 Found ${recipes.length} recipes for menu_item_id: ${menu_item_id}`);
+        console.log(`Found ${recipes.length} recipes for menu_item_id: ${menu_item_id}`);
 
         for (let recipe of recipes) {
           const { inv_item_id, quantity: recipeQty, rec_ing_uom } = recipe;
@@ -1531,7 +1532,7 @@ app.get('/logout', (req, res) => {
           if (rec_ing_uom === 'grams') {
             usedQuantity = usedQuantity / 1000; // convert grams to kilograms
           }
-          console.log(`📦 Deducting ${usedQuantity} kg from inventory item ${inv_item_id}`);
+          console.log(`Deducting ${usedQuantity} kg from inventory item ${inv_item_id}`);
 
           // Deduct from inventory
           await pool.execute(`
@@ -1562,7 +1563,7 @@ app.get('/logout', (req, res) => {
     try {
       console.log(`🛒 Triggering inventory update for completed order ID: ${orderId}`);
 
-      // 1️⃣ Fetch all menu items from the order
+      // Fetch all menu items from the order
       const [orderItems] = await pool.execute(`
       SELECT oc.menu_item_id, oc.quantity
       FROM order_transaction_items oti
@@ -1574,7 +1575,7 @@ app.get('/logout', (req, res) => {
         const menuItemId = item.menu_item_id;
         const orderedQty = item.quantity;
 
-        // 2️⃣ Fetch ingredients (recipes) for the menu item
+        // Fetch ingredients (recipes) for the menu item
         const [recipes] = await pool.execute(`
         SELECT inv_item_id, quantity, rec_ing_uom
         FROM recipes
@@ -1590,21 +1591,21 @@ app.get('/logout', (req, res) => {
 
           let totalQtyToDeduct = recipeQtyPerItem * orderedQty;
 
-          // 3️⃣ Convert if unit is grams (inventory is in kg)
+          //Convert if unit is grams (inventory is in kg)
           if (unit === 'grams') {
             totalQtyToDeduct = totalQtyToDeduct / 1000; // grams ➔ kg
           }
 
           console.log(`🔻 Deduct ${totalQtyToDeduct}kg from inventory item ID ${invItemId}`);
 
-          // 4️⃣ Update inventory
+          // Update inventory
           await pool.execute(`
           UPDATE inventory_items
           SET inv_item_current_quantity = inv_item_current_quantity - ?
           WHERE inv_item_id = ?
         `, [totalQtyToDeduct, invItemId]);
 
-          // 5️⃣ Log into inventory_transactions
+          // Log into inventory_transactions
           await pool.execute(`
           INSERT INTO inventory_transactions (inv_item_id, qty_change, transaction_type, notes)
           VALUES (?, ?, 'sale', ?)
@@ -1625,7 +1626,7 @@ app.get('/logout', (req, res) => {
   //***** Shop overview route starts here *****//
   app.get('/shop-overview', async (req, res) => {
     try {
-      // 1️⃣ Calculate Employees Wages
+      //Calculate Employees Wages
       const [employeeWages] = await pool.execute(`
       SELECT 
         SUM(CASE 
@@ -1645,7 +1646,7 @@ app.get('/logout', (req, res) => {
       const totalWages = parseFloat(employeeWages[0]?.total_wages) || 0;
 
 
-      // 2️⃣ Calculate Supplier Order Costs
+      //Calculate Supplier Order Costs
       const [supplierCosts] = await pool.execute(`
       SELECT 
         SUM((sot.quantity * sot.unit_price) * 1.09) AS total_supplier_cost
@@ -1656,7 +1657,7 @@ app.get('/logout', (req, res) => {
 
       const totalSupplierCost = parseFloat(supplierCosts[0]?.total_supplier_cost) || 0;
 
-      // 3️⃣ Calculate Total Sales Revenue
+      //Calculate Total Sales Revenue
       const [salesRevenue] = await pool.execute(`
       SELECT 
         SUM((mi.menu_item_price * oc.quantity) * 1.09) AS total_revenue

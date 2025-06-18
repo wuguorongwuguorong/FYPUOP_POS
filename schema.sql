@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS order_transaction (
     payment_method ENUM('credit_card', 'debit_card') NOT NULL,
     payment_status ENUM('pending', 'paid', 'refunded', 'partially_refunded') DEFAULT 'pending',
     points_redeemed INT DEFAULT 0,
+    checkout_session_id VARCHAR(255);
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (order_item_id) REFERENCES order_cart(order_item_id) ON DELETE CASCADE
