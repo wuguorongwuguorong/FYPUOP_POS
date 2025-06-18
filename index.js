@@ -194,6 +194,24 @@ app.get('/logout', (req, res) => {
     });
   });
 
+app.post('/api/comments', async (req, res) => {
+  const { customer_name, comment } = req.body;
+
+  // Validasi input
+  if (!customer_name || !comment) {
+    return res.status(400).json({ message: 'customer_name and comment are required' });
+  }
+
+  try {
+    const query = 'INSERT INTO comments (customer_name, comment) VALUES (?, ?)';
+    await pool.execute(query, [customer_name, comment]);
+    res.status(201).json({ message: 'Comment saved' });
+  } catch (err) {
+    console.error('Error saving comment:', err);
+    res.status(500).json({ message: 'Error saving comment' });
+  }
+});
+
 
 
   //***** ALL Menu route starts here*****//
@@ -298,6 +316,33 @@ app.get('/logout', (req, res) => {
       res.status(500).send('Error deleting menu item');
     }
   });
+//get the most popular menu post transaction
+  app.get('/api/menu/popular', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+     SELECT 
+        mi.menu_item_id,
+        mi.menu_item_name,
+        mi.menu_item_price as price,
+        mi.image_url,
+        COUNT(oti.order_item_id) AS order_count
+      FROM menu_items mi
+      JOIN order_cart oc ON mi.menu_item_id = oc.menu_item_id
+      JOIN order_transaction_items oti ON oc.order_item_id = oti.order_item_id
+      JOIN order_transaction ot ON oti.order_id = ot.order_id
+      WHERE ot.status = 'completed'
+      GROUP BY mi.menu_item_id
+      ORDER BY order_count DESC
+      LIMIT 4
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("🔥 Error fetching popular menu items:", error);
+    res.status(500).json({ message: "Server error while fetching popular menu" });
+  }
+});
+
   //***** ALL menu route ends here*****//
 
 
