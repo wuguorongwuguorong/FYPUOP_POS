@@ -144,5 +144,23 @@ router.get('/history', AuthenticateWithJWT, async (req, res) => {
     }
 });
 
+router.get('/history', AuthenticateWithJWT, async (req, res) => {
+    const customerId = req.userId; // Get the customer ID from the JWT (authenticated user)
+
+    try {
+        // Get the user's transaction history
+        const transactions = await userService.getUserHistoryById(customerId);
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ message: 'No transactions found for this customer.' });
+        }
+
+        // Return the transaction history
+        res.json(transactions);
+    } catch (error) {
+        console.error("Error fetching transaction history:", error);
+        res.status(500).json({ message: 'Server error while fetching transaction history.' });
+    }
+});
 
 module.exports = router;

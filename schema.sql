@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_name varchar(255) NOT NULL,
+  comment text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB 
+
 CREATE TABLE IF NOT EXISTS shops (
     shop_id INT AUTO_INCREMENT PRIMARY KEY,
     shop_name VARCHAR(100) NOT NULL,

@@ -197,7 +197,6 @@ app.get('/logout', (req, res) => {
 app.post('/api/comments', async (req, res) => {
   const { customer_name, comment } = req.body;
 
-  // Validasi input
   if (!customer_name || !comment) {
     return res.status(400).json({ message: 'customer_name and comment are required' });
   }

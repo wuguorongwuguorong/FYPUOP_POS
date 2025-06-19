@@ -50,7 +50,6 @@
         <th>Status</th>
         <th>Total Amount</th>
         <th>Payment Method</th>
-        <th>Payment Status</th>
         <th>Order Date</th>
       </tr>
     </thead>
@@ -61,8 +60,7 @@
           <td>{{this.status}}</td>
           <td>${{this.supply_total_amount}}</td>
           <td>{{this.payment_method}}</td>
-          <td>{{this.payment_status}}</td>
-          <td>{{this.order_date}}</td>
+          <td>{{formatDate this.order_date}}</td>
         </tr>
       {{/each}}
     </tbody>
