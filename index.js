@@ -30,7 +30,7 @@ console.log('__dirname', __dirname)
 const userRouter = require('./routes/users');
 const productsRouter = require('./routes/products');
 const cartRouter = require('./routes/cart');
-const stripeRoutes = require('./routes/stripe'); 
+const stripeRoutes = require('./routes/stripe');
 
 
 waxOn.on(hbs.handlebars);
@@ -137,17 +137,17 @@ async function main() {
   });
 
   // Protect routes that require login with verifyToken middleware
-app.get('/index', verifyToken, async (req, res) => {
-  try {
-    // Low stock items (example query)
-    const [lowStockItems] = await pool.execute(`
+  app.get('/index', verifyToken, async (req, res) => {
+    try {
+      // Low stock items (example query)
+      const [lowStockItems] = await pool.execute(`
       SELECT inv_item_name, inv_item_current_quantity
       FROM inventory_items
       WHERE inv_item_current_quantity <= inv_item_reorder_level
     `);
 
-    // Daily sales (using the updated query to calculate total sales)
-    const [dailySales] = await pool.execute(`
+      // Daily sales (using the updated query to calculate total sales)
+      const [dailySales] = await pool.execute(`
       SELECT SUM(oc.quantity * mi.menu_item_price) AS daily_sales
       FROM order_transaction ot
       JOIN order_cart oc ON ot.order_item_id = oc.order_item_id
@@ -155,8 +155,8 @@ app.get('/index', verifyToken, async (req, res) => {
       WHERE DATE(ot.order_date) = CURDATE() - INTERVAL 1 DAY
     `);
 
-    // Most ordered menu items (example query)
-    const [mostOrderedMenu] = await pool.execute(`
+      // Most ordered menu items (example query)
+      const [mostOrderedMenu] = await pool.execute(`
       SELECT menu_item_name, COUNT(*) AS order_count
       FROM order_transaction ot
       JOIN order_cart oc ON ot.order_item_id = oc.order_item_id
@@ -167,48 +167,41 @@ app.get('/index', verifyToken, async (req, res) => {
       LIMIT 5
     `);
 
-    // Transactions for the current month (example query)
-    const [transactionsCurrentMonth] = await pool.execute(`
+      // Transactions for the current month (example query)
+      const [transactionsCurrentMonth] = await pool.execute(`
       SELECT * FROM order_transaction
       WHERE MONTH(order_date) = MONTH(CURRENT_DATE)
     `);
 
-    // Pass all the data to the view
-    res.render('index', {
-      shopName: 'Your Shop Name', // Example: dynamic shop name if needed
-      lowStockItems,
-      dailySales: dailySales[0].daily_sales,
-      mostOrderedMenu,
-      transactionsCurrentMonth
-    });
-  } catch (err) {
-    console.error('Error fetching data:', err);
-    res.status(500).send('Server error');
-  }
-});
+      // Pass all the data to the view
+      res.render('index', {
+        shopName: 'Your Shop Name', // Example: dynamic shop name if needed
+        lowStockItems,
+        dailySales: dailySales[0].daily_sales,
+        mostOrderedMenu,
+        transactionsCurrentMonth
+      });
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
-// user logout route
-app.get('/logout', (req, res) => {
+  // user logout route
+  app.get('/logout', (req, res) => {
     req.session.destroy(() => {
       res.redirect('/'); // Redirect to login after logging out
     });
   });
 
-app.post('/api/comments', async (req, res) => {
-  const { customer_name, comment } = req.body;
-
-  if (!customer_name || !comment) {
-    return res.status(400).json({ message: 'customer_name and comment are required' });
-  }
-
-  try {
-    const query = 'INSERT INTO comments (customer_name, comment) VALUES (?, ?)';
-    await pool.execute(query, [customer_name, comment]);
-    res.status(201).json({ message: 'Comment saved' });
-  } catch (err) {
-    console.error('Error saving comment:', err);
-    res.status(500).json({ message: 'Error saving comment' });
-  }
+app.get('/api/comments', async (req, res) => {
+    try {
+        const [rows] = await pool.execute('SELECT * FROM comments ORDER BY created_at DESC');
+        res.json(rows); // Send the comments as JSON response
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).send('Error fetching comments');
+    }
 });
 
 
@@ -315,10 +308,28 @@ app.post('/api/comments', async (req, res) => {
       res.status(500).send('Error deleting menu item');
     }
   });
-//get the most popular menu post transaction
+//To toggle the menu when not in used
+  app.post('/menu/:Id/toggle-active', async (req, res) => {
+    const menuItemId = req.params.Id;
+
+    try {
+      await pool.execute(
+        `UPDATE menu_items 
+       SET is_active = NOT is_active 
+       WHERE menu_item_id = ?`,
+        [menuItemId]
+      );
+
+      res.redirect('/menu');
+    } catch (err) {
+      console.error("❌ Failed to toggle menu status:", err);
+      res.status(500).send("Server error");
+    }
+  });
+  //get the most popular menu post transaction
   app.get('/api/menu/popular', async (req, res) => {
-  try {
-    const [rows] = await pool.execute(`
+    try {
+      const [rows] = await pool.execute(`
      SELECT 
         mi.menu_item_id,
         mi.menu_item_name,
@@ -335,12 +346,12 @@ app.post('/api/comments', async (req, res) => {
       LIMIT 4
     `);
 
-    res.json(rows);
-  } catch (error) {
-    console.error("🔥 Error fetching popular menu items:", error);
-    res.status(500).json({ message: "Server error while fetching popular menu" });
-  }
-});
+      res.json(rows);
+    } catch (error) {
+      console.error("🔥 Error fetching popular menu items:", error);
+      res.status(500).json({ message: "Server error while fetching popular menu" });
+    }
+  });
 
   //***** ALL menu route ends here*****//
 
@@ -1500,34 +1511,36 @@ app.post('/api/comments', async (req, res) => {
 
   //*****Ordering starts here*****/
   // GET route to show completed orders with subtotal, tax, and total
-  app.get('/orders/completed/summary', async (req, res) => {
-    try {
-      const [completedOrders] = await pool.execute(`
-      SELECT 
-        ot.order_id,
-        ot.order_date,
-        c.User_name AS customer_name,
-        mi.menu_item_name,
-        mi.menu_item_price,
-        oc.quantity,
-        (mi.menu_item_price * oc.quantity) AS subtotal,
-        (mi.menu_item_price * oc.quantity * 0.09) AS tax,
-        (mi.menu_item_price * oc.quantity * 1.09) AS total
-      FROM order_transaction ot
-      JOIN order_transaction_items oti ON ot.order_id = oti.order_id
-      JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
-      JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
-      JOIN customers c ON ot.customer_id = c.customer_id
-      WHERE ot.status = 'completed'
-      ORDER BY ot.order_date DESC
-    `);
+ app.get('/orders/completed/summary', async (req, res) => {
+  try {
+  const [completedOrders] = await pool.execute(`
+  SELECT 
+    ot.order_id,
+    ot.order_date,
+    c.user_name AS customer_name,
+    mi.menu_item_name,
+    mi.menu_item_price,
+    oc.quantity,
+    (mi.menu_item_price * oc.quantity) AS subtotal,
+    ROUND(mi.menu_item_price * oc.quantity * 0.09, 2) AS tax,
+    ROUND(mi.menu_item_price * oc.quantity * 1.09, 2) AS total
+  FROM order_transaction ot
+  JOIN order_transaction_items oti ON ot.order_id = oti.order_id
+  JOIN order_cart oc ON oti.order_item_id = oc.order_item_id
+  JOIN menu_items mi ON oc.menu_item_id = mi.menu_item_id
+  JOIN customers c ON ot.customer_id = c.customer_id
+  WHERE ot.status = 'completed'
+  ORDER BY ot.order_date DESC
+  LIMIT 10 OFFSET 0
+`);
+  res.render('orders_completed_summary', { completedOrders });
 
-      res.render('orders_completed_summary', { completedOrders });
-    } catch (err) {
-      console.error("Failed to fetch completed orders summary:", err);
-      res.status(500).send('Server error');
-    }
-  });
+  } catch (err) {
+    console.error("Failed to fetch completed orders summary:", err);
+    res.status(500).send('Server error');
+  }
+});
+
 
   // POST route to mark order as completed and update inventory
   // Fake payment complete + auto inventory deduction (simulate payment success)

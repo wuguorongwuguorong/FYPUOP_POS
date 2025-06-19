@@ -15,7 +15,9 @@ async function getProductByName(name) {
 }
 
 async function getAllProducts() {
-  const [rows] = await pool.query(`SELECT menu_item_id, menu_item_name, CAST(menu_item_price AS DOUBLE) AS price, image_url FROM menu_items`);
+  const [rows] = await pool.execute(`  SELECT menu_item_id, menu_item_name, CAST(menu_item_price AS DOUBLE) AS price, image_url 
+    FROM menu_items 
+    WHERE is_active = 1`);
 
   rows.forEach(row => {
     // Ensure that the image path is properly constructed
@@ -26,7 +28,13 @@ async function getAllProducts() {
       // Provide a fallback if no image exists
       row.image_url = 'default-image.jpg'; // Set a default image if no image is available
     }
+          if (row.is_active === 0) {
+      row.active = false;
+    } else {
+      row.active = true;
+    }
   });
+
   return rows;
 }
 
