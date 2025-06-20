@@ -203,7 +203,23 @@ app.get('/api/comments', async (req, res) => {
         res.status(500).send('Error fetching comments');
     }
 });
+//Post Comments after customer input
+app.post('/api/comments', async (req, res) => {
+    const { customer_name, comment } = req.body;
 
+    if (!customer_name || !comment) {
+        return res.status(400).json({ message: 'customer_name and comment are required' });
+    }
+
+    try {
+        const query = 'INSERT INTO comments (customer_name, comment) VALUES (?, ?)';
+        await pool.execute(query, [customer_name, comment]);
+        res.status(201).json({ message: 'Comment saved' });
+    } catch (err) {
+        console.error('Error saving comment:', err);
+        res.status(500).json({ message: 'Error saving comment' });
+    }
+});
 
 
   //***** ALL Menu route starts here*****//
@@ -389,6 +405,7 @@ app.get('/api/comments', async (req, res) => {
     }
   });
 
+
   //POST route for inventory create
   app.post('/inventory/create', async (req, res) => {
     const {
@@ -412,6 +429,7 @@ app.get('/api/comments', async (req, res) => {
       res.status(500).send("Server error");
     }
   });
+
 
   //GET route for updating inventory from replishment
   app.get('/inventory-transactions', async (req, res) => {
