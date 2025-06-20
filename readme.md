@@ -22,6 +22,7 @@ nodemon index.js
 ~~~~~~~
 
 at the same root of FYPPOS_UOP create a file .env, inside the .env enter input the following lines
+```````
 DB_HOST=localhost
 DB_USER=root
 DB_NAME=EATery
@@ -33,7 +34,7 @@ STRIPE_SECRET_KEY=replace with stripe secret Key
 STRIPE_PUBLISHABLE_KEY=replace with stripe publishable key
 
 CLIENT_URL=https://yourlocalhost
-
+````````
 1. For JWT you can go to jwt.io and generate JWT Decoder and replace JWT Token
 2. For stripe, requires to sign up for a account. Once you have created and sign in, go to Developers tab and select API Keys
    
@@ -47,6 +48,11 @@ CLIENT_URL=https://yourlocalhost
 4. Before launching the browser make sure to unlock for the frontend to access
 ![Screenshot 2025-06-20 194016](https://github.com/user-attachments/assets/2a106ccd-5677-4ff6-b96b-94d61a19ce13)
 
+5. Lastly, on the same root creat another file and named it .gitignore and inside file add these 2 lines in.
+```````
+node_modules
+.env
+```````
 
 Once the completed, open up the browser
 ![image](https://github.com/user-attachments/assets/f9a16b93-8749-4b55-9753-d806b3d112d5)
