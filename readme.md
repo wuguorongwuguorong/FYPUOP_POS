@@ -20,6 +20,11 @@ Once the install completed
 npm install -g nodemon
 nodemon index.js
 ~~~~~~~
+
+Before launching the browser make sure to unlock for the frontend to access
+![Screenshot 2025-06-20 194016](https://github.com/user-attachments/assets/2a106ccd-5677-4ff6-b96b-94d61a19ce13)
+
+
 Once the completed, open up the browser
 ![image](https://github.com/user-attachments/assets/f9a16b93-8749-4b55-9753-d806b3d112d5)
 default username and password is admin login - admin123, password123
@@ -27,6 +32,7 @@ default username and password is admin login - admin123, password123
 MENU Creation
 To Create the menu, select the menu tab and click on Create New Menu
 ![image](https://github.com/user-attachments/assets/9678e065-24b7-462b-9af4-0e64be313c02)
+
 In the new menu field, filled out all the fields and for image, you can choose to download from external source or you leave it blank
 ![image](https://github.com/user-attachments/assets/3458fb04-9cba-4d5d-a416-2ca0b2d26518)
 
@@ -47,8 +53,10 @@ To update the single item in the inventory click on the Update From Orders butto
 Create Supplier
 Click on the Supplier tab, and select view supplier. It will appear in the window below 
 ![image](https://github.com/user-attachments/assets/ce0630f8-b1dd-4177-a2bf-bdae5b6cd32c)
+
 Click on Create New Supplier and filled up the field and press create supplier
 ![image](https://github.com/user-attachments/assets/0bfdb048-ecc9-4732-8d00-2ec3ad28e629)
+
 Bidfood has added to the supplier list
 ![image](https://github.com/user-attachments/assets/86e2e98f-d578-4e13-b178-1b680160cbec)
 
@@ -63,6 +71,7 @@ fill up the boxes accordingly and click submit order
 
 Any outstanding orders can view in Supplier tab, Outstanding Orders
 ![image](https://github.com/user-attachments/assets/69254d87-cdf8-4349-8136-b502da38d9d5)
+
 From the image, we can observe the Supplier Name and Shop and the item/s that was ordered and awaiting for goods to receive
 ![image](https://github.com/user-attachments/assets/5bf55128-74c0-4490-a690-a20ae3d9f7ee)
 
@@ -79,6 +88,7 @@ For this example i have ordered Doy Fish, i wil select the Dory Fish item in my 
 
 Select the lateste and checked the radio box
 ![image](https://github.com/user-attachments/assets/07682865-74d6-44c9-8fcf-54a8d602283c)
+
 now you have added successfully into Dory Fish in the inventory.
 ![image](https://github.com/user-attachments/assets/e2fc0068-e0e5-4366-8e50-58be7a5ce2ec)
 
@@ -101,6 +111,7 @@ New Role
 
 ![image](https://github.com/user-attachments/assets/42a394a5-4792-4f02-a5e4-e27f40252cb2)
 i will filled up the monthly rate and click Save
+
 After Saving, it will bring you to the Add New Employee page, this is where you filled up the employee information. 
 ![image](https://github.com/user-attachments/assets/aad1c64c-bc7f-467b-bf4b-001e111c7470)
 as you can see from the image above, the Role field has multiple roles that was created previously so for this case i will choose cleaner and follow by clicking Create Employee.
@@ -111,10 +122,13 @@ New Employee with New Role has been created.
 Existing Role 
 ![image](https://github.com/user-attachments/assets/5a82d791-5919-498e-b63d-3537465c5e79)
 Click on the Add New Employee to continue. 
+
 ![image](https://github.com/user-attachments/assets/fb042203-2b9b-4f5d-8779-1a17a3f22cdc)
 Above image is repeating process for the creation of new employee. Make sure select the role correctly , in this case. i have selected manager.
+
 ![image](https://github.com/user-attachments/assets/db53b1ce-44d3-4711-b7a5-bfd0fd58d4ef)
 and click Create Employee. 
+
 ![image](https://github.com/user-attachments/assets/8e4ce461-d1b9-42d8-ac08-1f1f890878b7)
 New Employee has been created. 
 
@@ -122,18 +136,22 @@ Edit Employee
 At the Create Employee page, click on the edit button on the right 
 ![image](https://github.com/user-attachments/assets/22f82a0d-9b9b-4736-b6fa-62a5e7ff7865)
 and it will redirect to edit employee page. 
+
 ![image](https://github.com/user-attachments/assets/764802ca-768b-415a-8bd8-c00a4523b4e9)
 ![image](https://github.com/user-attachments/assets/27bc299a-10ad-4fe3-a074-e37144c35414)
+
 For " Joe" example, adjusted the role from Cleaner to Chef and wage from a monthly 2300 to 2500 and click Update Employee. 
+
 ![image](https://github.com/user-attachments/assets/86085200-ef42-4881-8d39-fb3a1a7ec181)
 "Joe has successfully edit and updated.
 
 
 Finance P&L
 To view the Statement the P/L in a simplest way, click on the Reports -> Shopp Insights
+
 ![image](https://github.com/user-attachments/assets/118996e7-ef9e-43c0-84a8-87d80541004e)
 
-This should cover all the neccessary instructions for the objectivies of the project
+This covers all the neccessary instructions for the objectivies of the project
 
 
 
