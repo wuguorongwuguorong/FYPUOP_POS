@@ -21,7 +21,30 @@ npm install -g nodemon
 nodemon index.js
 ~~~~~~~
 
-Before launching the browser make sure to unlock for the frontend to access
+at the same root of FYPPOS_UOP create a file .env, inside the .env enter input the following lines
+DB_HOST=localhost
+DB_USER=root
+DB_NAME=EATery
+DB_PASSWORD=''
+
+JWT_SECRET=JWT Token 
+
+STRIPE_SECRET_KEY=replace with stripe secret Key
+STRIPE_PUBLISHABLE_KEY=replace with stripe publishable key
+
+CLIENT_URL=https://yourlocalhost
+
+1. For JWT you can go to jwt.io and generate JWT Decoder and replace JWT Token
+2. For stripe, requires to sign up for a account. Once you have created and sign in, go to Developers tab and select API Keys
+   
+![Screenshot 2025-06-20 203634](https://github.com/user-attachments/assets/56b1e5fc-997f-4807-abe4-608e8b3478e5)
+
+![Screenshot 2025-06-20 203110](https://github.com/user-attachments/assets/5f30ec88-432f-4d7b-ba60-96ee6a871c1c)
+
+3. Client url refers to the frontend local host add. After you run the frontend, go to the port and copy the add and make sure the lock is unlock for communication between frontend and backend.
+![Screenshot 2025-06-20 204018](https://github.com/user-attachments/assets/ab80b71a-7e37-4d80-a50b-c7d9e14fe793)
+
+4. Before launching the browser make sure to unlock for the frontend to access
 ![Screenshot 2025-06-20 194016](https://github.com/user-attachments/assets/2a106ccd-5677-4ff6-b96b-94d61a19ce13)
 
 
